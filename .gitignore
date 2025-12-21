@@ -1,0 +1,54 @@
+# This .gitignore helps keep the repository clean of local-only files.
+# It ensures necessary settings (ProjectSettings, Assets) are shared, 
+# while excluding generated or user-specific data (Library, Temp, UserSettings).
+
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+
+# MemoryCaptures can get excessive
+/[Mm]emoryCaptures/
+
+# Asset meta data should only be ignored when the associated asset is also ignored
+!/[Aa]ssets/**/*.meta
+
+# Visual Studio / Rider / IDE cache directories
+.vs/
+.gradle/
+.idea/
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
+
+# Unity3D generated meta files
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Sysinfo
+sysinfo.txt
+
+# Crashlytics generated file
+crashlytics-build.properties
+
+# Builds output
+*.apk
+*.unitypackage
+*.app
+*.exe
