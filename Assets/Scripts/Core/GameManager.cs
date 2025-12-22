@@ -8,9 +8,8 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    [Header("Characters")]
-    [SerializeField] private CharacterBlue blueCharacter;
-    [SerializeField] private CharacterRed redCharacter;
+    [Header("Player")]
+    [SerializeField] private CharacterBase player;
 
     [Header("Scenes")]
     [SerializeField] private string clearSceneName = "ClearScene";
@@ -42,12 +41,9 @@ public class GameManager : MonoBehaviour
         }
 
         // ゴール判定
-        if (blueCharacter != null && redCharacter != null)
+        if (player != null && player.IsInGoal)
         {
-            if (blueCharacter.IsInGoal && redCharacter.IsInGoal)
-            {
-                GameClear();
-            }
+            GameClear();
         }
     }
 

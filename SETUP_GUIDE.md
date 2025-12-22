@@ -1,7 +1,6 @@
 # もうひとつ (Mouhitotsu) - セットアップガイド
 
-2つの世界が重なる横スクロールパズルアクションゲーム。
-青と赤の2体のキャラクターを同時に操作し、両方を同時にゴールさせることが目的。
+"もう一つの重力"を操る2Dアクションパズルゲーム。
 
 ---
 
@@ -9,12 +8,11 @@
 
 1. [前提条件](#前提条件)
 2. [レイヤー設定](#レイヤー設定)
-3. [衝突設定](#衝突設定)
-4. [スクリプト一覧](#スクリプト一覧)
-5. [シーン作成](#シーン作成)
-6. [GameScene セットアップ](#gamescene-セットアップ)
-7. [Build Settings](#build-settings)
-8. [操作方法](#操作方法)
+3. [スクリプト一覧](#スクリプト一覧)
+4. [シーン作成](#シーン作成)
+5. [GameScene セットアップ](#gamescene-セットアップ)
+6. [Build Settings](#build-settings)
+7. [操作方法](#操作方法)
 
 ---
 
@@ -32,18 +30,8 @@
 
 | User Layer | 名前 |
 |------------|------|
-| 8 | `BlueWorld` |
-| 9 | `RedWorld` |
-| 10 | `Ground` |
-
----
-
-## 衝突設定
-
-**Edit > Project Settings > Physics 2D > Layer Collision Matrix**
-
-- `BlueWorld` と `RedWorld` のチェックを**外す**（互いにすり抜け）
-- 他は全てチェック
+| 8 | `Ground` |
+| 9 | `Player` |
 
 ---
 
@@ -53,14 +41,15 @@
 
 | パス | 役割 |
 |------|------|
-| `Player/CharacterBase.cs` | 移動・ジャンプ・ゴール判定の基底クラス |
-| `Player/CharacterBlue.cs` | 青キャラクター |
-| `Player/CharacterRed.cs` | 赤キャラクター |
+| `Player/CharacterBase.cs` | プレイヤー移動・ジャンプ・ゴール判定 |
 | `Core/GameManager.cs` | ゲーム状態管理・シーン遷移 |
-| `Camera/DualCamera.cs` | 2キャラ追従カメラ |
+| `Core/GravityController.cs` | 重力システム管理（通常+追加重力） |
+| `Camera/PlayerCamera.cs` | プレイヤー追従カメラ |
 | `Obstacles/Goal.cs` | ゴールエリア判定 |
 | `Obstacles/Spike.cs` | トゲ（触れると死亡） |
 | `Obstacles/FallZone.cs` | 落下死判定エリア |
+| `Obstacles/GravitySwitch.cs` | 重力切替スイッチ |
+| `Obstacles/GravityOrb.cs` | 一時的重力オーブ |
 | `UI/TitleButton.cs` | タイトルのStartボタン |
 | `UI/RetryButton.cs` | リトライボタン |
 | `UI/ToTitleButton.cs` | タイトルへ戻るボタン |
@@ -124,7 +113,7 @@
    - Projection: `Orthographic`
    - Size: `5`
    - Background: `#1a1a2e`（ダークネイビー）
-4. **Add Component > DualCamera**
+4. **Add Component > PlayerCamera**
 
 ### GameManager 作成
 
@@ -133,39 +122,37 @@
 3. Position: `(0, 0, 0)`
 4. **Add Component > GameManager**
 
-### BlueCharacter 作成
+### GravityController 作成
+
+1. 右クリック > Create Empty
+2. 名前: `GravityController`
+3. Position: `(0, 0, 0)`
+4. **Add Component > GravityController**
+5. Inspector設定:
+   - Primary Gravity: `(0, -9.81)`
+   - Secondary Gravity Multiplier: `0.5`（調整可能）
+
+### Player 作成
 
 1. 右クリック > 2D Object > Sprites > Square
-2. 名前: `BlueCharacter`
-3. **Layer**: `BlueWorld`（"No, this object only" を選択）
+2. 名前: `Player`
+3. **Layer**: `Player`
 4. **Transform**:
-   - Position: `(-3, 1, 0)`
+   - Position: `(0, 1, 0)`
    - Scale: `(0.8, 0.8, 1)`
 5. **Sprite Renderer**: Color `#4a90d9`
 6. **BoxCollider2D**: Size `(1, 1)`
 7. **Add Component > Rigidbody2D**:
    - Collision Detection: `Continuous`
    - Constraints > Freeze Rotation: ☑️ Z
-8. **Add Component > CharacterBlue**
+8. **Add Component > CharacterBase**
 9. **子オブジェクト作成**:
-   - BlueCharacter 右クリック > Create Empty
+   - Player 右クリック > Create Empty
    - 名前: `GroundCheck`
    - Position: `(0, -0.5, 0)`
-10. **CharacterBlue 設定**:
+10. **CharacterBase 設定**:
     - Ground Check: `GroundCheck` をドラッグ
     - Ground Layer: `Ground` を選択
-
-### RedCharacter 作成
-
-1. BlueCharacter を **Ctrl+D** で複製
-2. 名前: `RedCharacter`
-3. **Layer**: `RedWorld`
-4. **Transform**: Position `(3, 1, 0)`
-5. **Sprite Renderer**: Color `#d94a4a`
-6. CharacterBlue を削除 → **Add Component > CharacterRed**
-7. **CharacterRed 設定**:
-   - Ground Check: 子の `GroundCheck` をドラッグ
-   - Ground Layer: `Ground`
 
 ### 床 (Ground)
 
@@ -178,45 +165,41 @@
 5. **Sprite Renderer**: Color `#666666`
 6. **BoxCollider2D**: デフォルト
 
-### 青い壁 (BlueWall)
-
-1. Ground を **Ctrl+D**
-2. 名前: `BlueWall`
-3. **Layer**: `BlueWorld`
-4. **Transform**:
-   - Position: `(-5, 0, 0)`
-   - Scale: `(1, 3, 1)`
-5. **Sprite Renderer**: Color `#4a90d9`, Alpha `180`
-
-### 赤い壁 (RedWall)
-
-1. BlueWall を **Ctrl+D**
-2. 名前: `RedWall`
-3. **Layer**: `RedWorld`
-4. **Transform**: Position `(5, 0, 0)`
-5. **Sprite Renderer**: Color `#d94a4a`, Alpha `180`
-
-### GoalBlue
+### GravitySwitch (上重力)
 
 1. 右クリック > 2D Object > Sprites > Square
-2. 名前: `GoalBlue`
-3. **Layer**: Default
-4. **Transform**:
-   - Position: `(-10, -0.5, 0)`
+2. 名前: `GravitySwitch_Up`
+3. **Transform**:
+   - Position: `(3, -1, 0)`
+   - Scale: `(1, 0.3, 1)`
+4. **Sprite Renderer**: Color `#00ffff`
+5. **BoxCollider2D**: ☑️ Is Trigger
+6. **Add Component > GravitySwitch**:
+   - Gravity Direction: `Up`
+   - Switch Color: Cyan
+
+### GravitySwitch (リセット)
+
+1. GravitySwitch_Up を **Ctrl+D**
+2. 名前: `GravitySwitch_None`
+3. **Transform**: Position `(6, -1, 0)`
+4. **Sprite Renderer**: Color `#888888`
+5. **GravitySwitch**:
+   - Gravity Direction: `None`
+   - Switch Color: Gray
+
+### Goal
+
+1. 右クリック > 2D Object > Sprites > Square
+2. 名前: `Goal`
+3. **Transform**:
+   - Position: `(10, 3, 0)`（高い位置に配置）
    - Scale: `(2, 3, 1)`
-5. **Sprite Renderer**:
-   - Color: `#4a90d9`, Alpha `100`
+4. **Sprite Renderer**:
+   - Color: `#4ade80`, Alpha `100`
    - Order in Layer: `-1`
-6. **BoxCollider2D**: ☑️ Is Trigger
-7. **Add Component > Goal**: Goal Type: `Blue`
-
-### GoalRed
-
-1. GoalBlue を **Ctrl+D**
-2. 名前: `GoalRed`
-3. **Transform**: Position `(10, -0.5, 0)`
-4. **Sprite Renderer**: Color `#d94a4a`, Alpha `100`
-5. **Goal**: Goal Type: `Red`
+5. **BoxCollider2D**: ☑️ Is Trigger
+6. **Add Component > Goal**
 
 ### FallZone
 
@@ -231,11 +214,9 @@
 ### 参照設定
 
 1. **GameManager** を選択:
-   - Blue Character: `BlueCharacter` をドラッグ
-   - Red Character: `RedCharacter` をドラッグ
-2. **Main Camera (DualCamera)** を選択:
-   - Blue Character: `BlueCharacter` をドラッグ
-   - Red Character: `RedCharacter` をドラッグ
+   - Player: `Player` をドラッグ
+2. **Main Camera (PlayerCamera)** を選択:
+   - Player: `Player` をドラッグ
 
 ---
 
@@ -264,7 +245,20 @@
 
 ## ゲームルール
 
-- **青キャラ**: 青い壁にのみ衝突、青ゴールに入る
-- **赤キャラ**: 赤い壁にのみ衝突、赤ゴールに入る
-- **クリア条件**: 両方が同時にゴールに存在
-- **ゲームオーバー**: どちらかが落下死・トゲに触れる
+- **追加重力**: スイッチで方向を切り替え
+- **ベクトル合成**: 通常重力＋追加重力（0.5倍）
+- **クリア条件**: ゴールに到達
+- **ゲームオーバー**: 落下死・トゲに触れる
+
+---
+
+## 重力設定のカスタマイズ
+
+GravityController で以下を調整可能:
+
+| パラメータ | 説明 | デフォルト |
+|-----------|------|-----------|
+| Primary Gravity | 通常重力 | (0, -9.81) |
+| Secondary Gravity Multiplier | 追加重力の強度倍率 | 0.5 |
+
+倍率を上げると追加重力が強くなり、上重力で無重力に近づきます。

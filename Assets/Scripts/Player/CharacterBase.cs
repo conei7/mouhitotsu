@@ -1,10 +1,10 @@
 using UnityEngine;
 
 /// <summary>
-/// キャラクターの基底クラス - 移動、ジャンプ、ゴール判定
+/// プレイヤーキャラクター - 移動、ジャンプ、ゴール判定
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D), typeof(BoxCollider2D))]
-public abstract class CharacterBase : MonoBehaviour
+public class CharacterBase : MonoBehaviour
 {
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 8f;
