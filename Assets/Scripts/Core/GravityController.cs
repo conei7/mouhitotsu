@@ -11,7 +11,7 @@ public class GravityController : MonoBehaviour
     [SerializeField] private Vector2 primaryGravity = new Vector2(0, -9.81f);
 
     [Header("Secondary Gravity Settings")]
-    [SerializeField] private float secondaryGravityMultiplier = 0.5f;
+    [SerializeField, Range(0f, 2f)] private float secondaryGravityMultiplier = 1.0f;
     [Tooltip("Current secondary gravity direction (set by switches/orbs)")]
     [SerializeField] private Vector2 secondaryGravityDirection = Vector2.zero;
 
