@@ -2,6 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// 重力管理システム - 通常重力と追加重力のベクトル合成を管理
+/// 重ねがけ対応: スイッチを踏むたびに追加重力にベクトル加算
 /// </summary>
 public class GravityController : MonoBehaviour
 {
@@ -11,24 +12,48 @@ public class GravityController : MonoBehaviour
     [SerializeField] private Vector2 primaryGravity = new Vector2(0, -9.81f);
 
     [Header("Secondary Gravity Settings")]
-    [SerializeField, Range(0f, 2f)] private float secondaryGravityMultiplier = 1.0f;
-    [Tooltip("Current secondary gravity direction (set by switches/orbs)")]
-    [SerializeField] private Vector2 secondaryGravityDirection = Vector2.zero;
+    [SerializeField, Range(0.1f, 3f)] private float secondaryGravityStrength = 1.0f;
+    [Tooltip("追加重力の最大強度（これ以上は強くならない）")]
+    [SerializeField] private float maxSecondaryMagnitude = 3f;
+    
+    [Header("Current State (Debug)")]
+    [Tooltip("現在の追加重力ベクトル（重ねがけの結果）")]
+    [SerializeField] private Vector2 secondaryGravityVector = Vector2.zero;
 
     /// <summary>
     /// 合成された重力ベクトル
     /// </summary>
-    public Vector2 CombinedGravity => primaryGravity + (secondaryGravityDirection.normalized * primaryGravity.magnitude * secondaryGravityMultiplier);
+    public Vector2 CombinedGravity => primaryGravity + (secondaryGravityVector * primaryGravity.magnitude * secondaryGravityStrength);
 
     /// <summary>
     /// 追加重力が有効かどうか
     /// </summary>
-    public bool HasSecondaryGravity => secondaryGravityDirection != Vector2.zero;
+    public bool HasSecondaryGravity => secondaryGravityVector != Vector2.zero;
 
     /// <summary>
-    /// 現在の追加重力方向
+    /// 現在の追加重力方向（正規化）
     /// </summary>
-    public Vector2 SecondaryGravityDirection => secondaryGravityDirection;
+    public Vector2 SecondaryGravityDirection => secondaryGravityVector.normalized;
+
+    /// <summary>
+    /// 現在の追加重力ベクトル（重ねがけの結果、正規化なし）
+    /// </summary>
+    public Vector2 SecondaryGravityVector => secondaryGravityVector;
+
+    /// <summary>
+    /// 追加重力の強度（ベクトルの大きさ）
+    /// </summary>
+    public float SecondaryGravityMagnitude => secondaryGravityVector.magnitude;
+
+    /// <summary>
+    /// 通常重力ベクトル
+    /// </summary>
+    public Vector2 PrimaryGravity => primaryGravity;
+
+    /// <summary>
+    /// 追加重力の強度倍率
+    /// </summary>
+    public float SecondaryGravityStrength => secondaryGravityStrength;
 
     private void Awake()
     {
@@ -47,13 +72,31 @@ public class GravityController : MonoBehaviour
     }
 
     /// <summary>
-    /// 追加重力の方向を設定（スイッチやオーブから呼び出される）
+    /// 追加重力を加算（重ねがけ）
+    /// </summary>
+    /// <param name="direction">加算する方向ベクトル（正規化される）</param>
+    /// <param name="strength">加算する強度（デフォルト1.0）</param>
+    public void AddSecondaryGravity(Vector2 direction, float strength = 1f)
+    {
+        secondaryGravityVector += direction.normalized * strength;
+        
+        // 最大強度で制限
+        if (secondaryGravityVector.magnitude > maxSecondaryMagnitude)
+        {
+            secondaryGravityVector = secondaryGravityVector.normalized * maxSecondaryMagnitude;
+        }
+        
+        Debug.Log($"Secondary Gravity Added: +{direction.normalized * strength}, Total: {secondaryGravityVector}, Combined: {CombinedGravity}");
+    }
+
+    /// <summary>
+    /// 追加重力を設定（上書き、重ねがけなし）
     /// </summary>
     /// <param name="direction">方向ベクトル（正規化される）</param>
     public void SetSecondaryGravity(Vector2 direction)
     {
-        secondaryGravityDirection = direction.normalized;
-        Debug.Log($"Secondary Gravity Set: {secondaryGravityDirection}, Combined: {CombinedGravity}");
+        secondaryGravityVector = direction.normalized;
+        Debug.Log($"Secondary Gravity Set: {secondaryGravityVector}, Combined: {CombinedGravity}");
     }
 
     /// <summary>
@@ -61,16 +104,16 @@ public class GravityController : MonoBehaviour
     /// </summary>
     public void ClearSecondaryGravity()
     {
-        secondaryGravityDirection = Vector2.zero;
+        secondaryGravityVector = Vector2.zero;
         Debug.Log("Secondary Gravity Cleared");
     }
 
     /// <summary>
     /// 追加重力の強度倍率を変更
     /// </summary>
-    public void SetMultiplier(float multiplier)
+    public void SetStrength(float strength)
     {
-        secondaryGravityMultiplier = Mathf.Clamp(multiplier, 0f, 2f);
+        secondaryGravityStrength = Mathf.Clamp(strength, 0.1f, 3f);
     }
 
     private void OnDestroy()

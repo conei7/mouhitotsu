@@ -43,16 +43,18 @@
 |------|------|
 | `Player/CharacterBase.cs` | プレイヤー移動・ジャンプ・ゴール判定 |
 | `Core/GameManager.cs` | ゲーム状態管理・シーン遷移 |
-| `Core/GravityController.cs` | 重力システム管理（通常+追加重力） |
-| `Camera/PlayerCamera.cs` | プレイヤー追従カメラ |
+| `Core/GravityController.cs` | 重力システム管理（通常+追加重力、重ねがけ対応） |
+| `Camera/DualCamera.cs` | プレイヤー追従カメラ |
 | `Obstacles/Goal.cs` | ゴールエリア判定 |
 | `Obstacles/Spike.cs` | トゲ（触れると死亡） |
 | `Obstacles/FallZone.cs` | 落下死判定エリア |
-| `Obstacles/GravitySwitch.cs` | 重力切替スイッチ |
+| `Obstacles/GravitySwitch.cs` | 重力切替スイッチ（Add/Set/Clearモード対応） |
 | `Obstacles/GravityOrb.cs` | 一時的重力オーブ |
+| `UI/GravityIndicatorUI.cs` | 重力インジケーターUI |
 | `UI/TitleButton.cs` | タイトルのStartボタン |
 | `UI/RetryButton.cs` | リトライボタン |
 | `UI/ToTitleButton.cs` | タイトルへ戻るボタン |
+
 
 ---
 
@@ -259,6 +261,139 @@ GravityController で以下を調整可能:
 | パラメータ | 説明 | デフォルト |
 |-----------|------|-----------|
 | Primary Gravity | 通常重力 | (0, -9.81) |
-| Secondary Gravity Multiplier | 追加重力の強度倍率 | 0.5 |
+| Secondary Gravity Strength | 追加重力の強度倍率 | 1.0 |
+| Max Secondary Magnitude | 追加重力の最大強度（重ねがけ上限） | 3.0 |
 
-倍率を上げると追加重力が強くなり、上重力で無重力に近づきます。
+StreamingAssets### 重ねがけシステム
+
+スイッチを踏むたびに追加重力が**加算**されます。
+
+```
+例:
+上スイッチ → 追加重力: (0, 1)
+上スイッチ → 追加重力: (0, 2)  ← 上方向が強くなる
+右スイッチ → 追加重力: (1, 2)  ← 右上方向に！
+```
+
+### GravitySwitch モード
+
+| SwitchMode | 説明 |
+|------------|------|
+| Add | 重ねがけ（加算）- デフォルト |
+| Set | 上書き（従来の動作） |
+| Clear | 追加重力をリセット |
+
+---
+
+## GravityIndicatorUI セットアップ
+
+重力の方向と強さを画面に表示するUIです。
+
+### 1. Canvas作成（または既存を使用）
+
+1. Hierarchy 右クリック > UI > Canvas
+2. Canvas を選択
+3. **Canvas Scaler** を設定:
+   - UI Scale Mode: `Scale With Screen Size`
+   - Reference Resolution: `1920 x 1080`
+   - Match: `0.5`
+
+### 2. インジケーター背景作成
+
+1. Canvas 右クリック > UI > Image
+2. 名前: `GravityIndicator`
+3. **Rect Transform** を設定:
+   - Anchor Preset: 左上（Alt+Shiftを押しながらクリックで位置も設定）
+   - Pos X: `80`, Pos Y: `-80`
+   - Width: `120`, Height: `120`
+4. **Image** コンポーネント:
+   - Color: `#000000`（黒）, Alpha: `128`（半透明）
+
+### 3. 矢印画像を作成
+
+**GravityIndicator** の子として3つの矢印を作成します。
+
+#### ArrowPrimary（通常重力 - グレー）
+
+1. GravityIndicator 右クリック > UI > Image
+2. 名前: `ArrowPrimary`
+3. **Rect Transform**:
+   - Pos X: `0`, Pos Y: `0`, Pos Z: `0`
+   - Width: `10`, Height: `50`
+   - **Pivot**: X: `0.5`, Y: `0` ← **重要！**
+4. **Image**:
+   - Color: `#808080`（グレー）
+
+#### ArrowSecondary（追加重力 - シアン）
+
+1. GravityIndicator 右クリック > UI > Image
+2. 名前: `ArrowSecondary`
+3. **Rect Transform**:
+   - Pos X: `0`, Pos Y: `0`, Pos Z: `0`
+   - Width: `12`, Height: `50`
+   - **Pivot**: X: `0.5`, Y: `0` ← **重要！**
+4. **Image**:
+   - Color: `#00FFFF`（シアン）
+
+#### ArrowCombined（合成重力 - オレンジ）
+
+1. GravityIndicator 右クリック > UI > Image
+2. 名前: `ArrowCombined`
+3. **Rect Transform**:
+   - Pos X: `0`, Pos Y: `0`, Pos Z: `0`
+   - Width: `8`, Height: `60`
+   - **Pivot**: X: `0.5`, Y: `0` ← **重要！**
+4. **Image**:
+   - Color: `#FF8000`（オレンジ）
+
+### 4. 情報テキスト（オプション）
+
+1. GravityIndicator 右クリック > UI > Text - TextMeshPro
+2. 名前: `GravityInfoText`
+3. **Rect Transform**:
+   - Pos X: `140`, Pos Y: `0`
+   - Width: `150`, Height: `120`
+4. **TextMeshPro**:
+   - Font Size: `18`
+   - Alignment: Left, Middle
+   - Color: 白
+
+### 5. スクリプトをアタッチ
+
+1. **GravityIndicator** オブジェクトを選択
+2. Add Component > `GravityIndicatorUI`
+3. Inspector で各項目を設定:
+
+| フィールド | ドラッグするオブジェクト |
+|-----------|------------------------|
+| Arrow Primary | ArrowPrimary |
+| Arrow Secondary | ArrowSecondary |
+| Arrow Combined | ArrowCombined |
+| Arrow Primary Image | ArrowPrimary の Image |
+| Arrow Secondary Image | ArrowSecondary の Image |
+| Arrow Combined Image | ArrowCombined の Image |
+| Gravity Info Text | GravityInfoText（オプション） |
+
+### Pivot の設定方法
+
+Pivot は矢印の回転の中心点です。
+
+1. 矢印オブジェクトを選択
+2. Inspector の **Rect Transform** を見る
+3. **Pivot** の値を変更:
+   - X: `0.5`（横方向の中心）
+   - Y: `0`（縦方向の下端）
+
+これにより矢印が**下端を中心に回転**し、重力の方向を正しく示します。
+
+### 最終的な階層構造
+
+```
+Canvas
+└── GravityIndicator (Image + GravityIndicatorUI)
+    ├── ArrowPrimary (Image)
+    ├── ArrowSecondary (Image)
+    ├── ArrowCombined (Image)
+    └── GravityInfoText (TextMeshPro) [オプション]
+```
+
