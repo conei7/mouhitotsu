@@ -35,6 +35,8 @@ public class GravitySwitch : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private bool isActive = false;  // 現在オンかオフか
     private Vector2 myGravityContribution = Vector2.zero;  // このスイッチが追加した重力
+    private float lastToggleTime = -999f;  // 最後にトグルした時間
+    private const float COOLDOWN = 1f;  // クールダウン時間（秒）
 
     private void Awake()
     {
@@ -86,7 +88,11 @@ public class GravitySwitch : MonoBehaviour
     {
         if (collision.GetComponent<CharacterBase>() != null)
         {
+            // クールダウンチェック
+            if (Time.time - lastToggleTime < COOLDOWN) return;
+            
             ToggleSwitch();
+            lastToggleTime = Time.time;
         }
     }
 

@@ -83,6 +83,17 @@ public class MapGenerator : MonoBehaviour
         char[,] map = mapData.GetMapArray();
         float gridSize = mapSettings.gridSize;
 
+        // 壁用の親オブジェクト（CompositeCollider2Dで継ぎ目をなくす）
+        GameObject wallContainer = new GameObject("Walls");
+        wallContainer.transform.SetParent(objectsContainer);
+        wallContainer.layer = LayerMask.NameToLayer("Ground");
+        
+        var wallRb = wallContainer.AddComponent<Rigidbody2D>();
+        wallRb.bodyType = RigidbodyType2D.Static;
+        
+        var composite = wallContainer.AddComponent<CompositeCollider2D>();
+        composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
+
         for (int x = 0; x < mapData.Width; x++)
         {
             for (int y = 0; y < mapData.Height; y++)
@@ -93,8 +104,21 @@ public class MapGenerator : MonoBehaviour
                 if (prefab != null)
                 {
                     Vector3 position = new Vector3(x * gridSize, y * gridSize, 0);
-                    GameObject obj = Instantiate(prefab, position, Quaternion.identity, objectsContainer);
+                    
+                    // 壁は専用コンテナに入れる
+                    Transform parent = (symbol == '#') ? wallContainer.transform : objectsContainer;
+                    GameObject obj = Instantiate(prefab, position, Quaternion.identity, parent);
                     obj.name = $"{MapSettings.GetSymbolDescription(symbol)}_{x}_{y}";
+                    
+                    // 壁のコライダーをCompositeに使用
+                    if (symbol == '#')
+                    {
+                        var boxCollider = obj.GetComponent<BoxCollider2D>();
+                        if (boxCollider != null)
+                        {
+                            boxCollider.usedByComposite = true;
+                        }
+                    }
                 }
             }
         }
