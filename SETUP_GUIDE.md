@@ -44,13 +44,15 @@
 | `Player/CharacterBase.cs` | プレイヤー移動・ジャンプ・ゴール判定 |
 | `Core/GameManager.cs` | ゲーム状態管理・シーン遷移 |
 | `Core/GravityController.cs` | 重力システム管理（通常+追加重力、重ねがけ対応） |
+| `Core/StageManager.cs` | ステージ進行管理（進捗保存） |
 | `Camera/DualCamera.cs` | プレイヤー追従カメラ |
 | `Obstacles/Goal.cs` | ゴールエリア判定 |
 | `Obstacles/Spike.cs` | トゲ（触れると死亡） |
 | `Obstacles/FallZone.cs` | 落下死判定エリア |
-| `Obstacles/GravitySwitch.cs` | 重力切替スイッチ（Add/Set/Clearモード対応） |
+| `Obstacles/GravitySwitch.cs` | 重力切替スイッチ（オンオフトグル対応） |
 | `Obstacles/GravityOrb.cs` | 一時的重力オーブ |
 | `UI/GravityIndicatorUI.cs` | 重力インジケーターUI |
+| `UI/ClearScreenUI.cs` | クリア画面UI（次のステージ/リトライ/タイトル） |
 | `UI/TitleButton.cs` | タイトルのStartボタン |
 | `UI/RetryButton.cs` | リトライボタン |
 | `UI/ToTitleButton.cs` | タイトルへ戻るボタン |
@@ -85,9 +87,19 @@
 
 1. **File > New Scene** → Save As `Assets/Scenes/ClearScene.unity`
 2. **Canvas 作成**（同様設定）
-3. **テキスト**: Pos `(0, 50, 0)`, Text: `Clear!`, Font Size: `80`, Color: `#4ade80`
-4. **Titleボタン**: Pos `(0, -80, 0)`, Size: `200 x 60`, Text: `Title`
-   - Add Component > `ToTitleButton`, OnClick > `ToTitleButton.OnTitleClick`
+3. **空オブジェクト作成**: 名前 `ClearScreenManager`
+   - Add Component > `ClearScreenUI`
+4. **ステージテキスト**: Pos `(0, 150, 0)`, Text: `Stage 1`, Font Size: `36`
+   - ClearScreenUI の `Stage Text` にドラッグ
+5. **クリアテキスト**: Pos `(0, 50, 0)`, Text: `CLEAR!`, Font Size: `80`, Color: `#4ade80`
+   - ClearScreenUI の `Message Text` にドラッグ
+6. **Next Stageボタン**: Pos `(0, -50, 0)`, Size: `200 x 60`, Text: `Next Stage`
+   - Button の OnClick > `+` > ClearScreenManager をドラッグ > `ClearScreenUI.OnNextStageClick`
+   - ClearScreenUI の `Next Stage Button` にドラッグ（自動表示/非表示用）
+7. **Retryボタン**: Pos `(-120, -130, 0)`, Size: `180 x 60`, Text: `Retry`
+   - Button の OnClick > `ClearScreenUI.OnRetryClick`
+8. **Titleボタン**: Pos `(120, -130, 0)`, Size: `180 x 60`, Text: `Title`
+   - Button の OnClick > `ClearScreenUI.OnTitleClick`
 
 ### GameOverScene
 
@@ -397,3 +409,64 @@ Canvas
     └── GravityInfoText (TextMeshPro) [オプション]
 ```
 
+---
+
+## ステージシステム
+
+### 概要
+
+ゲームは複数のステージで構成されます。各ステージは `Stage1`, `Stage2`, ... という名前のシーンです。
+
+### ステージシーンの作成
+
+1. `GameScene.unity` を複製
+2. 名前を `Stage1.unity`, `Stage2.unity`, ... に変更
+3. 各ステージのレベルデザインを変更
+
+### Build Settings
+
+**File > Build Settings** で以下の順序でシーンを追加:
+
+```
+0: TitleScene
+1: Stage1
+2: Stage2
+3: Stage3
+...
+N: ClearScene
+N+1: GameOverScene
+```
+
+### GameManager 設定
+
+各ステージシーンの `GameManager` で:
+
+| パラメータ | 設定 |
+|-----------|------|
+| Total Stages | 総ステージ数（例: 5） |
+
+### ステージ進行の仕組み
+
+1. ゴールに到達 → `ClearScene` へ
+2. `ClearScene` で「Next Stage」を押す → 次のステージへ
+3. 最終ステージクリア → 「Next Stage」ボタンが非表示に
+4. 進行状況は `PlayerPrefs` に保存される
+
+### StageManager API
+
+```csharp
+// 現在のステージ番号
+int stage = StageManager.CurrentStage;
+
+// 次のステージへ
+StageManager.GoToNextStage();
+
+// 現在のステージをリトライ
+StageManager.RetryCurrentStage();
+
+// 特定のステージへ移動
+StageManager.GoToStage(3);
+
+// 進行状況リセット
+StageManager.ResetProgress();
+```
