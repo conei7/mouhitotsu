@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// 重力切替スイッチ - 踏むと追加重力の方向を変更
-/// 重ねがけ対応: 加算モードと上書きモードを選択可能
+/// 重力切替スイッチ - 踏むとオンオフで追加重力を切り替え
+/// 各スイッチで重力の強度を個別に設定可能
 /// </summary>
 public class GravitySwitch : MonoBehaviour
 {
@@ -16,98 +16,77 @@ public class GravitySwitch : MonoBehaviour
         Custom  // 任意の角度を使用
     }
 
-    public enum SwitchMode
-    {
-        Add,        // 重ねがけ（加算）
-        Set,        // 上書き
-        Clear       // リセット
-    }
-
     [Header("Switch Settings")]
     [SerializeField] private GravityDirection gravityDirection = GravityDirection.Up;
-    [SerializeField] private SwitchMode switchMode = SwitchMode.Add;  // デフォルトは重ねがけ
-    [SerializeField, Range(0.1f, 2f)] private float strength = 1f;    // 加算時の強度
+    [SerializeField, Range(0.1f, 3f)] private float gravityStrength = 1f;  // この重力の強度（加速度倍率）
     
     [Header("Custom Direction (when Custom selected)")]
     [Tooltip("任意の重力方向ベクトル（正規化されます）")]
     [SerializeField] private Vector2 customDirection = Vector2.up;
     [Tooltip("角度で指定（度数法、右が0度、反時計回り）")]
     [SerializeField] private float customAngle = 90f;
-    [SerializeField] private bool useAngle = false;  // trueならcustomAngleを使用
+    [SerializeField] private bool useAngle = false;
 
     [Header("Appearance")]
-    [SerializeField] private Color switchColor = Color.cyan;
-    [SerializeField] private bool isOneTimeUse = false;
-    [SerializeField] private bool autoColorFromDirection = true;  // 方向に応じて自動で色を設定
+    [SerializeField] private Color onColor = Color.cyan;
+    [SerializeField] private Color offColor = new Color(0.3f, 0.3f, 0.3f, 0.7f);
+    [SerializeField] private bool autoColorFromDirection = true;
 
     private SpriteRenderer spriteRenderer;
-    private bool hasBeenUsed = false;
+    private bool isActive = false;  // 現在オンかオフか
+    private Vector2 myGravityContribution = Vector2.zero;  // このスイッチが追加した重力
 
     private void Awake()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
-        UpdateColor();
+        UpdateVisual();
     }
 
     private void OnValidate()
     {
-        // エディタで値が変更されたとき色を更新
-        if (autoColorFromDirection)
+        if (autoColorFromDirection && spriteRenderer != null)
         {
-            UpdateColorFromDirection();
+            UpdateOnColorFromDirection();
         }
     }
 
-    private void UpdateColor()
+    private void UpdateOnColorFromDirection()
     {
-        if (spriteRenderer != null)
+        if (gravityDirection == GravityDirection.None)
         {
-            if (autoColorFromDirection)
-            {
-                UpdateColorFromDirection();
-            }
-            else
-            {
-                spriteRenderer.color = switchColor;
-            }
-        }
-    }
-
-    private void UpdateColorFromDirection()
-    {
-        if (spriteRenderer == null) return;
-
-        // Clearモードの場合はグレー
-        if (switchMode == SwitchMode.Clear || gravityDirection == GravityDirection.None)
-        {
-            spriteRenderer.color = Color.gray;
-            switchColor = Color.gray;
+            onColor = Color.gray;
             return;
         }
 
         Vector2 dir = GetDirectionVector();
-        
         if (dir == Vector2.zero)
         {
-            spriteRenderer.color = Color.gray;
+            onColor = Color.gray;
             return;
         }
 
-        // 方向に基づいて色を決定（HSVカラーホイール）
         float angle = Mathf.Atan2(dir.y, dir.x);
-        float hue = (angle + Mathf.PI) / (2 * Mathf.PI);  // 0-1の範囲に正規化
-        spriteRenderer.color = Color.HSVToRGB(hue, 0.8f, 1f);
-        switchColor = spriteRenderer.color;
+        float hue = (angle + Mathf.PI) / (2 * Mathf.PI);
+        onColor = Color.HSVToRGB(hue, 0.8f, 1f);
+    }
+
+    private void UpdateVisual()
+    {
+        if (spriteRenderer == null) return;
+
+        if (autoColorFromDirection)
+        {
+            UpdateOnColorFromDirection();
+        }
+
+        spriteRenderer.color = isActive ? onColor : offColor;
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (hasBeenUsed) return;
-
-        // プレイヤーかどうか確認
         if (collision.GetComponent<CharacterBase>() != null)
         {
-            ActivateSwitch();
+            ToggleSwitch();
         }
     }
 
@@ -117,7 +96,6 @@ public class GravitySwitch : MonoBehaviour
         {
             if (useAngle)
             {
-                // 角度からベクトルを計算
                 float rad = customAngle * Mathf.Deg2Rad;
                 return new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
             }
@@ -138,48 +116,31 @@ public class GravitySwitch : MonoBehaviour
         };
     }
 
-    private void ActivateSwitch()
+    private void ToggleSwitch()
     {
         if (GravityController.Instance == null) return;
 
-        switch (switchMode)
+        if (isActive)
         {
-            case SwitchMode.Add:
-                // 重ねがけ（加算）
-                Vector2 direction = GetDirectionVector();
-                if (direction != Vector2.zero)
-                {
-                    GravityController.Instance.AddSecondaryGravity(direction, strength);
-                }
-                break;
-
-            case SwitchMode.Set:
-                // 上書き
-                Vector2 setDirection = GetDirectionVector();
-                if (setDirection != Vector2.zero)
-                {
-                    GravityController.Instance.SetSecondaryGravity(setDirection);
-                }
-                else
-                {
-                    GravityController.Instance.ClearSecondaryGravity();
-                }
-                break;
-
-            case SwitchMode.Clear:
-                // リセット
-                GravityController.Instance.ClearSecondaryGravity();
-                break;
+            // オフにする: 追加した重力を削除
+            GravityController.Instance.RemoveSecondaryGravity(myGravityContribution);
+            myGravityContribution = Vector2.zero;
+            isActive = false;
         }
-
-        if (isOneTimeUse)
+        else
         {
-            hasBeenUsed = true;
-            if (spriteRenderer != null)
+            // オンにする: 重力を追加
+            Vector2 direction = GetDirectionVector();
+            if (direction != Vector2.zero)
             {
-                spriteRenderer.color = new Color(0.3f, 0.3f, 0.3f, 0.5f);
+                myGravityContribution = direction.normalized * gravityStrength;
+                GravityController.Instance.AddSecondaryGravity(direction, gravityStrength);
+                isActive = true;
             }
         }
+
+        UpdateVisual();
+        Debug.Log($"Switch {name}: {(isActive ? "ON" : "OFF")}, Contribution: {myGravityContribution}");
     }
 
     /// <summary>
@@ -190,7 +151,7 @@ public class GravitySwitch : MonoBehaviour
         gravityDirection = GravityDirection.Custom;
         useAngle = false;
         customDirection = direction;
-        UpdateColor();
+        UpdateVisual();
     }
 
     /// <summary>
@@ -201,6 +162,6 @@ public class GravitySwitch : MonoBehaviour
         gravityDirection = GravityDirection.Custom;
         useAngle = true;
         customAngle = angleDegrees;
-        UpdateColor();
+        UpdateVisual();
     }
 }

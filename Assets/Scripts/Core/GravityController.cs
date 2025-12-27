@@ -109,6 +109,16 @@ public class GravityController : MonoBehaviour
     }
 
     /// <summary>
+    /// 追加重力を削除（特定のスイッチがオフになったとき）
+    /// </summary>
+    /// <param name="contribution">削除する重力ベクトル</param>
+    public void RemoveSecondaryGravity(Vector2 contribution)
+    {
+        secondaryGravityVector -= contribution;
+        Debug.Log($"Secondary Gravity Removed: -{contribution}, Total: {secondaryGravityVector}, Combined: {CombinedGravity}");
+    }
+
+    /// <summary>
     /// 追加重力の強度倍率を変更
     /// </summary>
     public void SetStrength(float strength)
