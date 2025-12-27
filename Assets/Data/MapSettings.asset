@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a495ef03df482648b7d8999f3a6889b, type: 3}
+  m_Name: MapSettings
+  m_EditorClassIdentifier: 
+  gridSize: 1
+  wallPrefab: {fileID: 869502730646496462, guid: 53107e5fcca6d1c4c8204a2dff5aafc8, type: 3}
+  playerPrefab: {fileID: 2510192782078435641, guid: db12111c9ea25df4bb482ffb4006a3af, type: 3}
+  goalPrefab: {fileID: 6552135308991005650, guid: 26126db87301d9a49b96b1d1511be593, type: 3}
+  switchUpPrefab: {fileID: 6493750458188976968, guid: e605526d173cc894b9897bc9f96755b3, type: 3}
+  switchDownPrefab: {fileID: 6493750458188976968, guid: 86a075d57f3d0f84a82616b61a348c50, type: 3}
+  switchLeftPrefab: {fileID: 6493750458188976968, guid: dd84c68580c80ab42bab46017165f083, type: 3}
+  switchRightPrefab: {fileID: 6493750458188976968, guid: 2f1b6782edee77345bde3e0f2042db3d, type: 3}
+  spikePrefab: {fileID: 452469116679595923, guid: bbce54875177eab47afd5ad5a21689b5, type: 3}
+  fallZonePrefab: {fileID: 8739078034569369510, guid: f3d20d9d43d5a0c48a68c51fc05a9738, type: 3}
+  boxPrefab: {fileID: 0}
+  doorPrefab: {fileID: 0}
+  wallColor: {r: 1, g: 1, b: 1, a: 1}
+  backgroundColor: {r: 0.1, g: 0.1, b: 0.2, a: 1}

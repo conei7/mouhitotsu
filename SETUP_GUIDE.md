@@ -57,10 +57,217 @@
 | `UI/RetryButton.cs` | リトライボタン |
 | `UI/ToTitleButton.cs` | タイトルへ戻るボタン |
 
+---
+
+## プレハブ作成
+
+マップ生成システムを使用するには、以下のプレハブを作成する必要があります。
+
+### フォルダ構成
+
+```
+Assets/
+└── Prefabs/
+    ├── Player.prefab
+    ├── Wall.prefab
+    ├── Goal.prefab
+    └── Switches/
+        ├── SwitchUp.prefab
+        ├── SwitchDown.prefab
+        ├── SwitchLeft.prefab
+        └── SwitchRight.prefab
+```
+
+### Player プレハブ
+
+1. **Hierarchy > 右クリック > 2D Object > Sprites > Square**
+2. 名前を `Player` に変更
+3. Transform:
+   - Scale: `(0.8, 0.8, 1)` ← ブロックより少し小さく
+4. **Add Component > Rigidbody 2D**
+   - Gravity Scale: `1`
+   - Freeze Rotation: `Z` にチェック
+5. **Add Component > Box Collider 2D**
+6. **Add Component > Character Base**
+   - Jump Height Blocks: `3`
+   - Ground Layer: `Ground`
+7. Layer を `Player` に設定
+8. **Project ウィンドウ（Assets/Prefabs/）にドラッグ** → プレハブ化
+9. Hierarchy のオブジェクトを削除
+
+### Wall プレハブ
+
+1. **Hierarchy > 右クリック > 2D Object > Sprites > Square**
+2. 名前を `Wall` に変更
+3. Transform:
+   - Scale: `(1, 1, 1)`
+4. **Add Component > Box Collider 2D**
+5. Layer を `Ground` に設定
+6. SpriteRenderer の Color を好みの色に（例: グレー `#666666`）
+7. **Project にドラッグ** → プレハブ化
+8. Hierarchy のオブジェクトを削除
+
+### Goal プレハブ
+
+1. **Hierarchy > 右クリック > 2D Object > Sprites > Square**
+2. 名前を `Goal` に変更
+3. Transform:
+   - Scale: `(1, 1, 1)`
+4. **Add Component > Box Collider 2D**
+   - `Is Trigger` にチェック ← 重要！
+5. **Add Component > Goal**
+6. SpriteRenderer の Color を黄色系に（例: `#FFFF00`）
+7. **Project にドラッグ** → プレハブ化
+8. Hierarchy のオブジェクトを削除
+
+### 重力スイッチ プレハブ（4つ）
+
+各方向ごとに作成します。以下は「上」の例：
+
+1. **Hierarchy > 右クリック > 2D Object > Sprites > Square**
+2. 名前を `SwitchUp` に変更
+3. Transform:
+   - Scale: `(1, 1, 1)`
+4. **Add Component > Box Collider 2D**
+   - `Is Trigger` にチェック
+5. **Add Component > Gravity Switch**
+   - Gravity Direction: `Up`
+   - Gravity Strength: `1`
+6. SpriteRenderer の Color をシアン系に（例: `#00FFFF`）
+7. **Project（Assets/Prefabs/Switches/）にドラッグ** → プレハブ化
+8. Hierarchy のオブジェクトを削除
+
+同様に以下も作成：
+- `SwitchDown` (Direction: Down, Color: 青系)
+- `SwitchLeft` (Direction: Left, Color: マゼンタ系)
+- `SwitchRight` (Direction: Right, Color: 緑系)
+
+### Spike プレハブ（オプション）
+
+1. **Hierarchy > 右クリック > 2D Object > Sprites > Square**
+2. 名前を `Spike` に変更
+3. Transform:
+   - Scale: `(1, 1, 1)`
+4. **Add Component > Box Collider 2D** → `Is Trigger` にチェック
+5. **Add Component > Spike**
+6. SpriteRenderer の Color を赤に（`#FF0000`）
+7. **Project にドラッグ** → プレハブ化
+8. Hierarchy のオブジェクトを削除
+
+### FallZone プレハブ（オプション）
+
+落下死エリア用。ステージ下部に配置して使用。
+
+1. **Hierarchy > 右クリック > 2D Object > Sprites > Square**
+2. 名前を `FallZone` に変更
+3. Transform:
+   - Scale: `(20, 1, 1)` ← 横長にする（ステージ幅に合わせて調整）
+4. **Add Component > Box Collider 2D** → `Is Trigger` にチェック
+5. **Add Component > Fall Zone**
+6. SpriteRenderer の Color を透明な赤に（`#FF000050`）
+7. **Project にドラッグ** → プレハブ化
+8. Hierarchy のオブジェクトを削除
+
+---
+
+## MapSettings の設定
+
+### MapSettings アセット作成
+
+1. **Project ウィンドウで右クリック > Create > Mouhitotsu > Map Settings**
+2. 名前を `MapSettings` に変更
+3. 場所は `Assets/Data/` 推奨
+
+### プレハブの設定
+
+1. 作成した `MapSettings` を選択
+2. Inspector 右上の **🔒（ロック）** をクリック（これで選択が固定される）
+3. 各欄に先ほど作成したプレハブをドラッグ：
+
+| 欄 | 設定するプレハブ |
+|---|---|
+| Wall Prefab | Wall |
+| Player Prefab | Player |
+| Goal Prefab | Goal |
+| Switch Up Prefab | SwitchUp |
+| Switch Down Prefab | SwitchDown |
+| Switch Left Prefab | SwitchLeft |
+| Switch Right Prefab | SwitchRight |
+| Spike Prefab | Spike（あれば） |
+
+4. **🔒** をもう一度クリックして解除
+
+---
+
+## ステージ作成ワークフロー
+
+### Step 1: マップテキストを作成
+
+1. **VSCode** で `Assets/Data/Maps/Stage1.txt` を開く（等幅フォントで見やすい）
+2. マップを記述：
+
+```
+####################
+#                  #
+#                 G#
+#                ###
+#                  #
+#       ###        #
+#       ###        #
+# S   ^ ###    >   #
+####################
+```
+
+3. 保存
+
+### Step 2: MapData アセットを作成
+
+1. Unity で **Project > 右クリック > Create > Mouhitotsu > Map Data**
+2. 名前を `Stage1` に変更
+3. 場所は `Assets/Data/Maps/` 推奨
+
+### Step 3: マップテキストを貼り付け
+
+1. 作成した `Stage1` (MapData) を選択
+2. Inspector の **Map Text** 欄に、VSCode で作成したテキストを貼り付け
+3. Stage Name: `Stage 1`
+4. Stage Number: `1`
+
+### Step 4: ステージシーンを作成
+
+1. **File > New Scene** → Empty Scene
+2. **File > Save As** → `Assets/Scenes/Stage1.unity`
+
+### Step 5: MapGenerator を配置
+
+1. Hierarchy で **右クリック > Create Empty**
+2. 名前を `MapGenerator` に変更
+3. **Add Component > Map Generator**
+4. Inspector で設定：
+   - **Map Data**: `Stage1` (作成したMapData)
+   - **Map Settings**: `MapSettings`
+   - **Main Camera**: Main Camera
+
+### Step 6: マップ生成
+
+1. MapGenerator の Inspector で **「🔨 マップ生成」** ボタンをクリック
+2. マップが生成される！
+3. シーンを保存 (`Ctrl + S`)
+
+### Step 7: Build Settings に追加
+
+1. **File > Build Settings**
+2. `Stage1` シーンをドラッグして追加
+
+### Step 8: テストプレイ
+
+1. **Play** ボタンを押してテスト
+2. 問題があれば MapData のテキストを修正して再生成
 
 ---
 
 ## シーン作成
+
 
 ### TitleScene
 
