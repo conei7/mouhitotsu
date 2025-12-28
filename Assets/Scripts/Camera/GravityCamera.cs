@@ -31,9 +31,6 @@ public class GravityCamera : MonoBehaviour
                 player = playerObj.transform;
             }
         }
-        
-        Debug.Log($"GravityCamera: Player = {(player != null ? player.name : "null")}");
-        Debug.Log($"GravityCamera: GravityController = {(GravityController.Instance != null ? "found" : "null")}");
     }
 
     private void LateUpdate()

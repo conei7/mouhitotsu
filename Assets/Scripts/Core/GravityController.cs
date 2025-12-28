@@ -85,8 +85,6 @@ public class GravityController : MonoBehaviour
         {
             secondaryGravityVector = secondaryGravityVector.normalized * maxSecondaryMagnitude;
         }
-        
-        Debug.Log($"Secondary Gravity Added: +{direction.normalized * strength}, Total: {secondaryGravityVector}, Combined: {CombinedGravity}");
     }
 
     /// <summary>
@@ -96,7 +94,6 @@ public class GravityController : MonoBehaviour
     public void SetSecondaryGravity(Vector2 direction)
     {
         secondaryGravityVector = direction.normalized;
-        Debug.Log($"Secondary Gravity Set: {secondaryGravityVector}, Combined: {CombinedGravity}");
     }
 
     /// <summary>
@@ -105,7 +102,6 @@ public class GravityController : MonoBehaviour
     public void ClearSecondaryGravity()
     {
         secondaryGravityVector = Vector2.zero;
-        Debug.Log("Secondary Gravity Cleared");
     }
 
     /// <summary>
@@ -115,7 +111,6 @@ public class GravityController : MonoBehaviour
     public void RemoveSecondaryGravity(Vector2 contribution)
     {
         secondaryGravityVector -= contribution;
-        Debug.Log($"Secondary Gravity Removed: -{contribution}, Total: {secondaryGravityVector}, Combined: {CombinedGravity}");
     }
 
     /// <summary>

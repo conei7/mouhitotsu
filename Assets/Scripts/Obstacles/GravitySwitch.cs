@@ -146,7 +146,6 @@ public class GravitySwitch : MonoBehaviour
         }
 
         UpdateVisual();
-        Debug.Log($"Switch {name}: {(isActive ? "ON" : "OFF")}, Contribution: {myGravityContribution}");
     }
 
     /// <summary>

@@ -127,7 +127,6 @@ public class MapGenerator : MonoBehaviour
         SetupCamera();
 
         hasGenerated = true;
-        Debug.Log($"マップ生成完了: {mapData.Width}x{mapData.Height}");
     }
 
     /// <summary>
