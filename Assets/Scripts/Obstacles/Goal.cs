@@ -10,6 +10,7 @@ public class Goal : MonoBehaviour
         if (other.TryGetComponent<CharacterBase>(out var player))
         {
             player.EnterGoal();
+            AudioManager.Instance?.PlayGoal();
         }
     }
 

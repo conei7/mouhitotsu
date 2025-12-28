@@ -93,6 +93,9 @@ public class GravitySwitch : MonoBehaviour
             
             ToggleSwitch();
             lastToggleTime = Time.time;
+            
+            // スイッチ音
+            AudioManager.Instance?.PlaySwitch();
         }
     }
 

@@ -1,0 +1,101 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 029413af0093f8d47b6d7162c1e155ff, type: 3}
+  m_Name: Stage2
+  m_EditorClassIdentifier: 
+  mapText: '####################################
+
+    #                                 
+    #
+
+    #                                 G#
+
+    #                               
+    ###
+
+    #                                  #
+
+    #                                 
+    #
+
+    #                           ########
+
+    #                          
+    #      #
+
+    #                           #      #
+
+    #                   
+    ########      #
+
+    #                    #             #
+
+    #             
+    ######              #
+
+    #              #                   #
+
+    #      
+    ########                   #
+
+    #       #                    #######
+
+    #      
+    #                    #     #
+
+    #       #             ########     #
+
+    #  
+    #####             #            #
+
+    #   #          ########            #
+
+    #  
+    #          #                   #
+
+    #   #   ########            ########
+
+    #  
+    #   #                   #      #
+
+    #   #   #            ########      #
+
+    #####  
+    #            #             #
+
+    #   ^   #     ########             #
+
+    #      
+    #     #              #######
+
+    #       #######              #     #
+
+    #                    
+    ########     #
+
+    #              ########      <     #
+
+    #             
+    #                   #
+
+    #       ########                   #
+
+    #      
+    #                          #
+
+    # S   > #                          #
+
+    ####################################'
+  stageName: Stage2
+  stageNumber: 2
+  cameraSize: 0
+  cameraOffset: {x: 0, y: 0}

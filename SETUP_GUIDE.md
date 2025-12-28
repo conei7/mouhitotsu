@@ -45,7 +45,8 @@
 | `Core/GameManager.cs` | ゲーム状態管理・シーン遷移 |
 | `Core/GravityController.cs` | 重力システム管理（通常+追加重力、重ねがけ対応） |
 | `Core/StageManager.cs` | ステージ進行管理（進捗保存） |
-| `Camera/DualCamera.cs` | プレイヤー追従カメラ |
+| `Camera/GravityCamera.cs` | 重力に合わせてカメラ回転・プレイヤー追従 |
+| `Audio/AudioManager.cs` | BGM・SE管理、音量設定保存 |
 | `Obstacles/Goal.cs` | ゴールエリア判定 |
 | `Obstacles/Spike.cs` | トゲ（触れると死亡） |
 | `Obstacles/FallZone.cs` | 落下死判定エリア |
@@ -53,6 +54,7 @@
 | `Obstacles/GravityOrb.cs` | 一時的重力オーブ |
 | `UI/GravityIndicatorUI.cs` | 重力インジケーターUI |
 | `UI/ClearScreenUI.cs` | クリア画面UI（次のステージ/リトライ/タイトル） |
+| `UI/VolumeSettingsUI.cs` | 音量設定UI |
 | `UI/TitleButton.cs` | タイトルのStartボタン |
 | `UI/RetryButton.cs` | リトライボタン |
 | `UI/ToTitleButton.cs` | タイトルへ戻るボタン |
@@ -676,4 +678,177 @@ StageManager.GoToStage(3);
 
 // 進行状況リセット
 StageManager.ResetProgress();
+```
+
+---
+
+## オーディオセットアップ
+
+BGMとSE（効果音）を管理するシステムです。音量はPlayerPrefsに保存されます。
+
+### 1. AudioManager を作成
+
+どのシーンからでもアクセスできるように、最初に読み込まれるシーン（TitleScene推奨）に配置します。
+
+1. **TitleScene** を開く
+2. Hierarchy 右クリック > Create Empty
+3. 名前: `AudioManager`
+4. **Add Component > AudioManager**
+5. Inspector で設定:
+
+| フィールド | 説明 |
+|-----------|------|
+| BGM Source | 空欄でOK（自動生成） |
+| SFX Source | 空欄でOK（自動生成） |
+| Jump Sound | ジャンプ時のSE |
+| Land Sound | 着地時のSE |
+| Switch Sound | 重力スイッチ切替時のSE |
+| Goal Sound | ゴール到達時のSE |
+| Death Sound | 死亡時のSE |
+| Main BGM | ゲーム中のBGM |
+
+### 2. AudioClip の準備
+
+1. `Assets/Audio/` フォルダを作成
+2. SE ファイル（.wav, .mp3など）をドラッグ
+3. AudioManager の各フィールドにドラッグ
+
+### 3. 音量設定UI（オプション）
+
+ポーズメニューや設定画面に音量調整スライダーを配置する手順です。
+TitleScene には既に Canvas（TitleText と StartButton の親）があるので、それを使います。
+
+#### Step 1: 設定パネル作成
+
+1. **TitleScene** を開く
+2. Hierarchy で既存の **Canvas** を選択（TitleText の親オブジェクト）
+3. Canvas 右クリック > **UI > Panel**
+4. 名前を `SettingsPanel` に変更
+5. **Rect Transform** を設定:
+   - **Anchor Preset**: Middle Center（中央）
+   - **Width**: `400`, **Height**: `300`
+6. **Image** の Color を `#000000CC`（半透明の黒）に設定
+
+#### Step 3: マスター音量スライダー作成
+
+1. SettingsPanel 右クリック > **UI > Slider**
+2. 名前を `MasterSlider` に変更
+3. **Rect Transform** を設定:
+   - **Pos Y**: `80`
+   - **Width**: `300`, **Height**: `30`
+4. **Slider** コンポーネントを設定:
+   - **Min Value**: `0`
+   - **Max Value**: `1`
+   - **Value**: `1`
+   - **Whole Numbers**: **OFF**（チェックを外す）
+
+#### Step 4: マスター音量ラベル作成
+
+1. SettingsPanel 右クリック > **UI > Text - TextMeshPro**
+2. 名前を `MasterLabel` に変更
+3. **Rect Transform** を設定:
+   - **Pos Y**: `110`
+   - **Width**: `300`, **Height**: `30`
+4. **TextMeshProUGUI** を設定:
+   - **Text**: `マスター: 100%`
+   - **Font Size**: `24`
+   - **Alignment**: Center
+
+#### Step 5: BGM音量スライダー作成
+
+1. `MasterSlider` を **Ctrl+D** で複製
+2. 名前を `BGMSlider` に変更
+3. **Rect Transform** の **Pos Y** を `0` に変更
+
+#### Step 6: BGM音量ラベル作成
+
+1. `MasterLabel` を **Ctrl+D** で複製
+2. 名前を `BGMLabel` に変更
+3. **Rect Transform** の **Pos Y** を `30` に変更
+4. **Text** を `BGM: 70%` に変更
+
+#### Step 7: SE音量スライダー作成
+
+1. `MasterSlider` を **Ctrl+D** で複製
+2. 名前を `SFXSlider` に変更
+3. **Rect Transform** の **Pos Y** を `-80` に変更
+
+#### Step 8: SE音量ラベル作成
+
+1. `MasterLabel` を **Ctrl+D** で複製
+2. 名前を `SFXLabel` に変更
+3. **Rect Transform** の **Pos Y** を `-50` に変更
+4. **Text** を `SE: 100%` に変更
+
+#### Step 9: VolumeSettingsUI をアタッチ
+
+1. `SettingsPanel` を選択
+2. **Add Component > Volume Settings UI**
+3. Inspector で各フィールドにドラッグ:
+
+| フィールド | ドラッグするオブジェクト |
+|-----------|------------------------|
+| Master Slider | MasterSlider |
+| BGM Slider | BGMSlider |
+| SFX Slider | SFXSlider |
+| Master Label | MasterLabel |
+| BGM Label | BGMLabel |
+| SFX Label | SFXLabel |
+
+#### 最終的な階層構造
+
+```
+SettingsCanvas
+└── SettingsPanel (VolumeSettingsUI.cs)
+    ├── MasterSlider (Slider)
+    ├── MasterLabel (TextMeshProUGUI)
+    ├── BGMSlider (Slider)
+    ├── BGMLabel (TextMeshProUGUI)
+    ├── SFXSlider (Slider)
+    └── SFXLabel (TextMeshProUGUI)
+```
+
+
+### 最終的な階層構造
+
+```
+TitleScene
+└── AudioManager (AudioManager.cs) ← DontDestroyOnLoad
+```
+
+### 音量設定UI の階層
+
+```
+Canvas
+└── VolumeSettings (VolumeSettingsUI.cs)
+    ├── MasterSlider (Slider)
+    ├── MasterLabel (TextMeshPro)
+    ├── BGMSlider (Slider)
+    ├── BGMLabel (TextMeshPro)
+    ├── SFXSlider (Slider)
+    └── SFXLabel (TextMeshPro)
+```
+
+### AudioManager API
+
+```csharp
+// SE再生
+AudioManager.Instance.PlayJump();
+AudioManager.Instance.PlaySwitch();
+AudioManager.Instance.PlayGoal();
+AudioManager.Instance.PlayDeath();
+
+// カスタムSE再生
+AudioManager.Instance.PlaySFX(myClip);
+
+// BGM制御
+AudioManager.Instance.PlayBGM(myBGM);
+AudioManager.Instance.StopBGM();
+AudioManager.Instance.PauseBGM();
+AudioManager.Instance.ResumeBGM();
+
+// 音量設定 (0.0 - 1.0)
+AudioManager.Instance.SetMasterVolume(0.8f);
+AudioManager.Instance.SetBGMVolume(0.7f);
+AudioManager.Instance.SetSFXVolume(1.0f);
 ```

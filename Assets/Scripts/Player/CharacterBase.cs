@@ -9,7 +9,7 @@ using UnityEngine;
 public class CharacterBase : MonoBehaviour
 {
     [Header("Movement")]
-    [SerializeField] private float moveSpeed = 5f;
+    [SerializeField] private float moveSpeed = 4f;
     [SerializeField] private float jumpForce = 8f;
 
     [Header("Ground Check")]
@@ -91,6 +91,9 @@ public class CharacterBase : MonoBehaviour
             }
             justJumped = true;
             jumpCooldown = JUMP_COOLDOWN_TIME;
+            
+            // ジャンプ音
+            AudioManager.Instance?.PlayJump();
         }
     }
 
@@ -343,6 +346,7 @@ public class CharacterBase : MonoBehaviour
 
     public void Die()
     {
+        AudioManager.Instance?.PlayDeath();
         GameManager.Instance?.OnCharacterDied();
     }
 }
