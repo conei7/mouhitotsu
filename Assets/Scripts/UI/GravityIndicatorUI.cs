@@ -40,9 +40,18 @@ public class GravityIndicatorUI : MonoBehaviour
         if (arrowCombinedImage != null) arrowCombinedImage.color = combinedColor;
     }
 
+    private float cameraRotation = 0f;
+
     private void Update()
     {
         if (GravityController.Instance == null) return;
+
+        // カメラの回転を取得
+        Camera mainCamera = Camera.main;
+        if (mainCamera != null)
+        {
+            cameraRotation = mainCamera.transform.eulerAngles.z;
+        }
 
         UpdateArrows();
         UpdateInfoText();
@@ -107,10 +116,12 @@ public class GravityIndicatorUI : MonoBehaviour
         arrow.gameObject.SetActive(true);
 
         // 方向から角度を計算（上が0度）
+        // カメラの回転を考慮して、画面に対して正しい方向を表示
         float angle = Mathf.Atan2(direction.x, direction.y) * Mathf.Rad2Deg;
+        float adjustedAngle = angle + cameraRotation; // カメラ回転を加算
         
         // 滑らかに回転
-        Quaternion targetRotation = Quaternion.Euler(0, 0, -angle);
+        Quaternion targetRotation = Quaternion.Euler(0, 0, -adjustedAngle);
         arrow.rotation = Quaternion.Slerp(arrow.rotation, targetRotation, smoothSpeed * Time.deltaTime);
 
         // 矢印の長さを重力の強さに応じて調整
