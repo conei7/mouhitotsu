@@ -8,6 +8,20 @@ public static class StageManager
 {
     private const string CURRENT_STAGE_KEY = "CurrentStage";
     private const string MAX_CLEARED_STAGE_KEY = "MaxClearedStage";
+    private const string LAST_PLAYED_SCENE_KEY = "LastPlayedScene";
+
+    /// <summary>
+    /// 最後にプレイしたシーン名（GameOver/Clear画面からのリトライ用）
+    /// </summary>
+    public static string LastPlayedScene
+    {
+        get => PlayerPrefs.GetString(LAST_PLAYED_SCENE_KEY, "Stage1");
+        set
+        {
+            PlayerPrefs.SetString(LAST_PLAYED_SCENE_KEY, value);
+            PlayerPrefs.Save();
+        }
+    }
 
     /// <summary>
     /// 現在のステージ番号（1から開始）
@@ -81,11 +95,19 @@ public static class StageManager
     }
 
     /// <summary>
-    /// 現在のステージをリトライ
+    /// 現在のステージをリトライ（保存されたシーンに戻る）
     /// </summary>
     public static void RetryCurrentStage()
     {
-        SceneManager.LoadScene(GetStageSceneName(CurrentStage));
+        SceneManager.LoadScene(LastPlayedScene);
+    }
+    
+    /// <summary>
+    /// 現在のステージをリトライ
+    /// </summary>
+    public static void Retry()
+    {
+        SceneManager.LoadScene(LastPlayedScene);
     }
 
     /// <summary>

@@ -58,6 +58,12 @@ public class GameManager : MonoBehaviour
         // 新しいシーンでプレイヤーを探す
         currentPlayer = FindObjectOfType<CharacterBase>();
         isGameOver = false;
+        
+        // ステージシーンの場合、リトライ用に保存
+        if (scene.name != clearSceneName && scene.name != gameOverSceneName && scene.name != titleSceneName)
+        {
+            StageManager.LastPlayedScene = scene.name;
+        }
     }
 
     private void Update()

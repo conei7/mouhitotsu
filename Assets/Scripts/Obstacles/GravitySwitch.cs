@@ -31,6 +31,11 @@ public class GravitySwitch : MonoBehaviour
     [SerializeField] private Color onColor = Color.cyan;
     [SerializeField] private Color offColor = new Color(0.3f, 0.3f, 0.3f, 0.7f);
     [SerializeField] private bool autoColorFromDirection = true;
+    
+    [Header("Sprites (Optional)")]
+    [Tooltip("スプライトを設定すると色ではなく画像で切り替え")]
+    [SerializeField] private Sprite onSprite;
+    [SerializeField] private Sprite offSprite;
 
     private SpriteRenderer spriteRenderer;
     private bool isActive = false;  // 現在オンかオフか
@@ -46,10 +51,10 @@ public class GravitySwitch : MonoBehaviour
 
     private void OnValidate()
     {
-        if (autoColorFromDirection && spriteRenderer != null)
-        {
-            UpdateOnColorFromDirection();
-        }
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
+        
+        UpdateVisual();
     }
 
     private void UpdateOnColorFromDirection()
@@ -76,12 +81,21 @@ public class GravitySwitch : MonoBehaviour
     {
         if (spriteRenderer == null) return;
 
-        if (autoColorFromDirection)
+        // スプライトが設定されていれば切り替え
+        if (onSprite != null && offSprite != null)
         {
-            UpdateOnColorFromDirection();
+            spriteRenderer.sprite = isActive ? onSprite : offSprite;
+            spriteRenderer.color = Color.white; // スプライトの色をそのまま使う
         }
-
-        spriteRenderer.color = isActive ? onColor : offColor;
+        else
+        {
+            // スプライトがなければ色で切り替え
+            if (autoColorFromDirection)
+            {
+                UpdateOnColorFromDirection();
+            }
+            spriteRenderer.color = isActive ? onColor : offColor;
+        }
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
