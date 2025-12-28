@@ -7265,8 +7265,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ec2a3e28fc9fa54a8ee404279bc901d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gravityDirection: 1
-  gravityStrength: 1.3
+  gravityDirection: 0
+  gravityStrength: 1
   customDirection: {x: 0, y: 1}
   customAngle: 90
   useAngle: 0

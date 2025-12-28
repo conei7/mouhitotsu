@@ -48,16 +48,28 @@ public class GravityCamera : MonoBehaviour
 
     private void UpdateRotation()
     {
-        Vector2 gravity = Physics2D.gravity;  // デフォルトでPhysics2D.gravityを使用
+        Vector2 gravity = Physics2D.gravity;
         
         if (GravityController.Instance != null)
         {
             gravity = GravityController.Instance.CombinedGravity;
         }
 
-        // 重力方向から回転角度を計算
-        if (gravity.sqrMagnitude > 0.01f)
+        // 無重力時はプレイヤーの足元の壁が画面下になるように
+        if (gravity.sqrMagnitude < 0.01f)
         {
+            // プレイヤーの壁法線を取得
+            var playerChar = player?.GetComponent<CharacterBase>();
+            if (playerChar != null && playerChar.IsZeroGravity)
+            {
+                // 壁法線の逆方向（足元方向）が画面下になるように
+                Vector2 feetDir = -playerChar.ZeroGravityWallNormal;
+                targetRotation = Mathf.Atan2(feetDir.x, -feetDir.y) * Mathf.Rad2Deg;
+            }
+        }
+        else
+        {
+            // 通常：重力方向が画面下になるように
             targetRotation = Mathf.Atan2(gravity.x, -gravity.y) * Mathf.Rad2Deg;
         }
 
