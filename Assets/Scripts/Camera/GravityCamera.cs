@@ -23,6 +23,16 @@ public class GravityCamera : MonoBehaviour
 
     private void Start()
     {
+        FindPlayer();
+    }
+
+    private void OnEnable()
+    {
+        FindPlayer();
+    }
+
+    private void FindPlayer()
+    {
         if (player == null)
         {
             var playerObj = FindObjectOfType<CharacterBase>();

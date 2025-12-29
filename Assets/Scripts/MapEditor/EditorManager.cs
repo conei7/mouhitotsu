@@ -267,6 +267,9 @@ public class EditorManager : MonoBehaviour
         // 重力をリセット
         Physics2D.gravity = new Vector2(0, -9.81f);
 
+        // スイッチの状態をリセット
+        ResetAllSwitches();
+
         // カメラを復元
         if (editorCamera != null)
         {
@@ -339,6 +342,27 @@ public class EditorManager : MonoBehaviour
             if (goal != null)
             {
                 goal.enabled = enable;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 全スイッチの状態をリセット
+    /// </summary>
+    private void ResetAllSwitches()
+    {
+        if (placementSystem == null) return;
+
+        foreach (var kvp in placementSystem.PlacedTiles)
+        {
+            var obj = kvp.Value.gameObject;
+            if (obj == null) continue;
+
+            var gravitySwitch = obj.GetComponent<GravitySwitch>();
+            if (gravitySwitch != null)
+            {
+                // スイッチをOFFに戻す
+                gravitySwitch.ResetSwitch();
             }
         }
     }

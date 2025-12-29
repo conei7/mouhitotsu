@@ -91,6 +91,12 @@ public class PlacementSystem : MonoBehaviour
         {
             // 配置を取り消す = 削除
             RemoveTileInternal(action.position);
+            
+            // 上書きされたタイルがあれば復元
+            if (action.replacedTileType.HasValue)
+            {
+                PlaceTileInternal(action.position, action.replacedTileType.Value);
+            }
         }
         else
         {
@@ -204,19 +210,27 @@ public class PlacementSystem : MonoBehaviour
     /// </summary>
     public void PlaceTile(Vector2Int gridPos, char tileType)
     {
+        char? replacedTileType = null;
+        
         // 既に同じタイルがある場合はスキップ
         if (placedTiles.TryGetValue(gridPos, out PlacedTile existing))
         {
             if (existing.tileType == tileType) return;
-            // 違うタイルなら削除してから配置
+            // 違うタイルなら削除してから配置（元のタイルタイプを保存）
+            replacedTileType = existing.tileType;
             RemoveTileInternal(gridPos);
         }
 
         PlaceTileInternal(gridPos, tileType);
 
-        // Undo履歴に追加
-        undoStack.Push(new UndoAction { position = gridPos, tileType = tileType, wasPlace = true });
-        redoStack.Clear(); // 新しいアクションでRedoをクリア
+        // Undo履歴に追加（上書きされたタイルも記録）
+        undoStack.Push(new UndoAction { 
+            position = gridPos, 
+            tileType = tileType, 
+            wasPlace = true,
+            replacedTileType = replacedTileType
+        });
+        redoStack.Clear();
 
         // 履歴制限
         while (undoStack.Count > MAX_UNDO)
@@ -467,5 +481,6 @@ public class UndoAction
     public Vector2Int position;
     public char tileType;
     public bool wasPlace; // true=配置, false=削除
+    public char? replacedTileType; // 上書きされた元のタイル
     public List<UndoAction> clearActions; // クリア時の複数アクション
 }

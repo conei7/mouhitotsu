@@ -190,4 +190,21 @@ public class GravitySwitch : MonoBehaviour
         customAngle = angleDegrees;
         UpdateVisual();
     }
+
+    /// <summary>
+    /// スイッチをOFF状態にリセット
+    /// </summary>
+    public void ResetSwitch()
+    {
+        if (isActive && GravityController.Instance != null)
+        {
+            // このスイッチが追加した重力を解除
+            GravityController.Instance.RemoveSecondaryGravity(myGravityContribution);
+        }
+        
+        isActive = false;
+        myGravityContribution = Vector2.zero;
+        lastToggleTime = -999f;
+        UpdateVisual();
+    }
 }
