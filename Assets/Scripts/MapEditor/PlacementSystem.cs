@@ -77,8 +77,17 @@ public class PlacementSystem : MonoBehaviour
         if (undoStack.Count == 0) return;
 
         UndoAction action = undoStack.Pop();
-        
-        if (action.wasPlace)
+
+        // クリアアクションの場合
+        if (action.clearActions != null && action.clearActions.Count > 0)
+        {
+            // 全タイルを復元
+            foreach (var subAction in action.clearActions)
+            {
+                PlaceTileInternal(subAction.position, subAction.tileType);
+            }
+        }
+        else if (action.wasPlace)
         {
             // 配置を取り消す = 削除
             RemoveTileInternal(action.position);
@@ -97,8 +106,17 @@ public class PlacementSystem : MonoBehaviour
         if (redoStack.Count == 0) return;
 
         UndoAction action = redoStack.Pop();
-        
-        if (action.wasPlace)
+
+        // クリアアクションの場合
+        if (action.clearActions != null && action.clearActions.Count > 0)
+        {
+            // 全タイルを削除（再クリア）
+            foreach (var subAction in action.clearActions)
+            {
+                RemoveTileInternal(subAction.position);
+            }
+        }
+        else if (action.wasPlace)
         {
             // 配置をやり直す
             PlaceTileInternal(action.position, action.tileType);
@@ -246,6 +264,24 @@ public class PlacementSystem : MonoBehaviour
             character.enabled = false;
         }
 
+        // 壁タイルの場合、レイヤーを設定
+        if (tileType == '#')
+        {
+            // Groundレイヤーに設定
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            if (groundLayer >= 0)
+            {
+                obj.layer = groundLayer;
+            }
+            
+            // Edge Radiusを追加して継ぎ目を緩和
+            var boxCollider = obj.GetComponent<BoxCollider2D>();
+            if (boxCollider != null)
+            {
+                boxCollider.edgeRadius = 0.01f;
+            }
+        }
+
         // 記録
         placedTiles[gridPos] = new PlacedTile
         {
@@ -301,10 +337,37 @@ public class PlacementSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// 全タイルを削除
+    /// 全タイルを削除（Undo対応）
     /// </summary>
     public void ClearAll()
     {
+        // Undo用に全タイルを記録
+        List<UndoAction> clearActions = new List<UndoAction>();
+        foreach (var kvp in placedTiles)
+        {
+            clearActions.Add(new UndoAction
+            {
+                position = kvp.Key,
+                tileType = kvp.Value.tileType,
+                wasPlace = false // 削除アクション
+            });
+        }
+
+        // 1つのクリアアクションとして記録（Undoで全復元）
+        if (clearActions.Count > 0)
+        {
+            // 複数アクションを1つにまとめるため、特別なアクションを追加
+            undoStack.Push(new UndoAction
+            {
+                position = Vector2Int.zero,
+                tileType = '\0', // 特殊マーカー
+                wasPlace = false,
+                clearActions = clearActions
+            });
+            redoStack.Clear();
+        }
+
+        // 実際に削除
         foreach (var tile in placedTiles.Values)
         {
             if (tile.gameObject != null)
@@ -404,5 +467,5 @@ public class UndoAction
     public Vector2Int position;
     public char tileType;
     public bool wasPlace; // true=配置, false=削除
+    public List<UndoAction> clearActions; // クリア時の複数アクション
 }
-

@@ -1338,6 +1338,7 @@ GameObject:
   - component: {fileID: 1053963099}
   - component: {fileID: 1053963098}
   - component: {fileID: 1053963097}
+  - component: {fileID: 1053963101}
   m_Layer: 0
   m_Name: EditorManager
   m_TagString: Untagged
@@ -1404,6 +1405,27 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1053963101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1053963096}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3eef43f72a49a324bbdaa38c4feee6c3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  placementSystem: {fileID: 1053963098}
+  gridOverlay: {fileID: 1053963097}
+  editorCamera: {fileID: 1491207931}
+  editorCanvas: {fileID: 1168357448}
+  gravityControllerPrefab: {fileID: 0}
+  gravityIndicatorPrefab: {fileID: 3799869404690663368, guid: 377ee7028bd4e6a469f5ca584ca0dcf5, type: 3}
+  mapSettings: {fileID: 11400000, guid: cbe8e4ceabfe86c498b46debb19b9a37, type: 2}
+  testPlayHintPanel: {fileID: 0}
+  isPlayMode: 0
 --- !u!1 &1168357445
 GameObject:
   m_ObjectHideFlags: 0

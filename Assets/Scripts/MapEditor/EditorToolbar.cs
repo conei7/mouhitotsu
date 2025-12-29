@@ -109,8 +109,21 @@ public class EditorToolbar : MonoBehaviour
 
     private void OnTestPlayClick()
     {
-        Debug.Log("テストプレイ機能は未実装です");
-        // TODO: Phase 4で実装
+        if (EditorManager.Instance != null)
+        {
+            if (EditorManager.Instance.IsPlayMode)
+            {
+                EditorManager.Instance.StopTestPlay();
+            }
+            else
+            {
+                EditorManager.Instance.StartTestPlay();
+            }
+        }
+        else
+        {
+            Debug.LogWarning("EditorManagerが見つかりません");
+        }
     }
 
     private void OnTitleClick()

@@ -22,7 +22,7 @@ public class ObjectPalette : MonoBehaviour
     private readonly List<PaletteItem> items = new List<PaletteItem>
     {
         new PaletteItem { symbol = '#', name = "壁", shortcut = KeyCode.Alpha1 },
-        new PaletteItem { symbol = 'S', name = "スタート", shortcut = KeyCode.Alpha2 },
+        new PaletteItem { symbol = 'S', name = "プレイヤー", shortcut = KeyCode.Alpha2 },
         new PaletteItem { symbol = 'G', name = "ゴール", shortcut = KeyCode.Alpha3 },
         new PaletteItem { symbol = '^', name = "↑スイッチ", shortcut = KeyCode.Alpha4 },
         new PaletteItem { symbol = 'v', name = "↓スイッチ", shortcut = KeyCode.Alpha5 },
@@ -127,12 +127,23 @@ public class ObjectPalette : MonoBehaviour
         selectedIndex = index;
         placementSystem?.SetTileType(items[index].symbol);
 
-        // ボタンの色を更新
+        // ボタンの色を更新（即座に反映）
         for (int i = 0; i < buttons.Count; i++)
         {
+            // ColorBlockを更新
             ColorBlock colors = buttons[i].colors;
-            colors.normalColor = (i == selectedIndex) ? selectedColor : normalColor;
+            Color targetColor = (i == selectedIndex) ? selectedColor : normalColor;
+            colors.normalColor = targetColor;
+            colors.highlightedColor = targetColor;
+            colors.selectedColor = targetColor;
             buttons[i].colors = colors;
+
+            // Imageの色も直接変更（即座に反映）
+            var image = buttons[i].GetComponent<UnityEngine.UI.Image>();
+            if (image != null)
+            {
+                image.color = targetColor;
+            }
         }
     }
 
