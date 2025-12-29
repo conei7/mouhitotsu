@@ -100,7 +100,11 @@ public class GravitySwitch : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.GetComponent<CharacterBase>() != null)
+        // プレイヤーまたは箱がスイッチを押せる
+        bool isPlayer = collision.GetComponent<CharacterBase>() != null;
+        bool isBox = collision.GetComponent<Box>() != null;
+        
+        if (isPlayer || isBox)
         {
             // クールダウンチェック
             if (Time.time - lastToggleTime < COOLDOWN) return;

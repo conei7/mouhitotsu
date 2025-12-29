@@ -22,7 +22,7 @@ MonoBehaviour:
   switchRightPrefab: {fileID: 6493750458188976968, guid: 2f1b6782edee77345bde3e0f2042db3d, type: 3}
   spikePrefab: {fileID: 452469116679595923, guid: bbce54875177eab47afd5ad5a21689b5, type: 3}
   fallZonePrefab: {fileID: 8739078034569369510, guid: f3d20d9d43d5a0c48a68c51fc05a9738, type: 3}
-  boxPrefab: {fileID: 0}
+  boxPrefab: {fileID: 7484851622655942808, guid: fdf7655df4893ca44b837edebcc28e17, type: 3}
   doorPrefab: {fileID: 0}
   wallColor: {r: 1, g: 1, b: 1, a: 1}
   backgroundColor: {r: 0.1, g: 0.1, b: 0.2, a: 1}
