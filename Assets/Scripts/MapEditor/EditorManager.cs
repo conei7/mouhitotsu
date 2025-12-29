@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections.Generic;
 
 /// <summary>
 /// エディタマネージャー - エディタモードとプレイモードの切り替え
@@ -34,6 +35,9 @@ public class EditorManager : MonoBehaviour
     private Vector3 savedCameraPosition;
     private float savedCameraSize;
 
+    // テストプレイ前の状態を保存
+    private Dictionary<Vector2Int, Vector3> savedPositions = new Dictionary<Vector2Int, Vector3>();
+
     public bool IsPlayMode => isPlayMode;
 
     private void Awake()
@@ -58,11 +62,70 @@ public class EditorManager : MonoBehaviour
 
     private void Update()
     {
+        if (!isPlayMode) return;
+
         // Escでテストプレイ終了
-        if (isPlayMode && Input.GetKeyDown(KeyCode.Escape))
+        if (Input.GetKeyDown(KeyCode.Escape))
         {
             StopTestPlay();
+            return;
         }
+
+        // Rキーでリトライ（プレイヤー位置をリセット）
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            RetryTestPlay();
+            return;
+        }
+
+        // プレイヤー死亡チェック
+        CheckPlayerDeath();
+    }
+
+    /// <summary>
+    /// プレイヤーが死亡しているかチェック
+    /// </summary>
+    private void CheckPlayerDeath()
+    {
+        if (testPlayer == null) return;
+
+        var character = testPlayer.GetComponent<CharacterBase>();
+        if (character != null && !character.IsAlive)
+        {
+            // 少し待ってからリトライ
+            Invoke(nameof(RetryTestPlay), 1f);
+        }
+    }
+
+    /// <summary>
+    /// テストプレイをリトライ（全オブジェクトをリセット）
+    /// </summary>
+    public void RetryTestPlay()
+    {
+        if (!isPlayMode) return;
+        
+        CancelInvoke(nameof(RetryTestPlay));
+
+        // スイッチをリセット
+        ResetAllSwitches();
+
+        // 重力をリセット
+        Physics2D.gravity = new Vector2(0, -9.81f);
+
+        // 全オブジェクトの位置を復元
+        RestoreAllPositions();
+
+        // プレイヤー状態をリセット
+        if (testPlayer != null)
+        {
+            var character = testPlayer.GetComponent<CharacterBase>();
+            if (character != null)
+            {
+                character.Revive();
+            }
+        }
+
+        Debug.Log("リトライ！");
     }
 
     /// <summary>
@@ -91,6 +154,9 @@ public class EditorManager : MonoBehaviour
         }
 
         isPlayMode = true;
+
+        // 全オブジェクトの位置を保存
+        SaveAllPositions();
 
         // カメラ状態を保存
         if (editorCamera != null)
@@ -270,6 +336,9 @@ public class EditorManager : MonoBehaviour
         // スイッチの状態をリセット
         ResetAllSwitches();
 
+        // 全オブジェクトの位置を復元
+        RestoreAllPositions();
+
         // カメラを復元
         if (editorCamera != null)
         {
@@ -314,6 +383,10 @@ public class EditorManager : MonoBehaviour
             if (rb != null)
             {
                 rb.simulated = enable;
+                if (enable)
+                {
+                    rb.velocity = Vector2.zero; // 開始時に速度リセット
+                }
             }
 
             // CharacterBaseは個別に制御（プレイヤーのみ有効化）
@@ -363,6 +436,48 @@ public class EditorManager : MonoBehaviour
             {
                 // スイッチをOFFに戻す
                 gravitySwitch.ResetSwitch();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 全オブジェクトの位置を保存
+    /// </summary>
+    private void SaveAllPositions()
+    {
+        savedPositions.Clear();
+        if (placementSystem == null) return;
+
+        foreach (var kvp in placementSystem.PlacedTiles)
+        {
+            var obj = kvp.Value.gameObject;
+            if (obj != null)
+            {
+                savedPositions[kvp.Key] = obj.transform.position;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 全オブジェクトの位置を復元
+    /// </summary>
+    private void RestoreAllPositions()
+    {
+        if (placementSystem == null) return;
+
+        foreach (var kvp in placementSystem.PlacedTiles)
+        {
+            var obj = kvp.Value.gameObject;
+            if (obj != null && savedPositions.TryGetValue(kvp.Key, out Vector3 pos))
+            {
+                obj.transform.position = pos;
+
+                // Rigidbody2Dの速度もリセット
+                var rb = obj.GetComponent<Rigidbody2D>();
+                if (rb != null)
+                {
+                    rb.velocity = Vector2.zero;
+                }
             }
         }
     }

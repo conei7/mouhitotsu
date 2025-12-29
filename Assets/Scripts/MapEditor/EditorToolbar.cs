@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// エディタツールバー - 各種ボタンと情報表示
@@ -19,6 +20,14 @@ public class EditorToolbar : MonoBehaviour
     [SerializeField] private Button loadButton;
     [SerializeField] private Button testPlayButton;
     [SerializeField] private Button titleButton;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+    [DllImport("__Internal")]
+    private static extern void CopyToClipboard(string text);
+
+    [DllImport("__Internal")]
+    private static extern void PasteFromClipboard(string gameObjectName, string methodName);
+#endif
 
     private void Start()
     {
@@ -64,7 +73,6 @@ public class EditorToolbar : MonoBehaviour
 
     private void OnClearClick()
     {
-        // 確認ダイアログなしで削除（後で追加可能）
         placementSystem?.ClearAll();
     }
 
@@ -75,36 +83,52 @@ public class EditorToolbar : MonoBehaviour
         string mapText = placementSystem.ToText();
         if (string.IsNullOrEmpty(mapText))
         {
-            Debug.Log("保存するタイルがありません");
+            Debug.Log("No tiles to save");
             return;
         }
 
-        // クリップボードにコピー
+#if UNITY_WEBGL && !UNITY_EDITOR
+        CopyToClipboard(mapText);
+#else
         GUIUtility.systemCopyBuffer = mapText;
-        Debug.Log("マップをクリップボードにコピーしました！\nテキストエディタに貼り付けて保存できます。");
+#endif
+        Debug.Log("Map copied to clipboard!");
     }
 
     private void OnLoadClick()
     {
         if (placementSystem == null) return;
 
-        // クリップボードから読み込み
+#if UNITY_WEBGL && !UNITY_EDITOR
+        PasteFromClipboard(gameObject.name, "OnClipboardPaste");
+#else
         string mapText = GUIUtility.systemCopyBuffer;
+        LoadMapFromText(mapText);
+#endif
+    }
+
+    // WebGLからのコールバック
+    public void OnClipboardPaste(string mapText)
+    {
+        LoadMapFromText(mapText);
+    }
+
+    private void LoadMapFromText(string mapText)
+    {
         if (string.IsNullOrEmpty(mapText))
         {
-            Debug.Log("クリップボードが空です");
+            Debug.Log("Clipboard is empty");
             return;
         }
 
-        // マップデータっぽいかチェック（#か空白を含む）
         if (!mapText.Contains("#") && !mapText.Contains("S"))
         {
-            Debug.Log("クリップボードにマップデータがありません");
+            Debug.Log("No valid map data in clipboard");
             return;
         }
 
         placementSystem.LoadFromText(mapText);
-        Debug.Log("クリップボードからマップを読み込みました！");
+        Debug.Log("Map loaded from clipboard!");
     }
 
     private void OnTestPlayClick()
@@ -122,7 +146,7 @@ public class EditorToolbar : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("EditorManagerが見つかりません");
+            Debug.LogWarning("EditorManager not found");
         }
     }
 

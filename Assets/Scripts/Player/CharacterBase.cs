@@ -37,6 +37,7 @@ public class CharacterBase : MonoBehaviour
     public bool IsInGoal { get; private set; }
     public bool IsZeroGravity => isZeroGravity;
     public Vector2 ZeroGravityWallNormal => zeroGravityWallNormal;
+    public bool IsAlive { get; private set; } = true;
 
     private void Awake()
     {
@@ -346,7 +347,33 @@ public class CharacterBase : MonoBehaviour
 
     public void Die()
     {
+        if (!IsAlive) return;
+        IsAlive = false;
         AudioManager.Instance?.PlayDeath();
+
+        // テストプレイ中はEditorManagerでリトライ
+        if (EditorManager.Instance != null && EditorManager.Instance.IsPlayMode)
+        {
+            // EditorManagerが死亡を検知してリトライする
+            return;
+        }
+
         GameManager.Instance?.OnCharacterDied();
+    }
+
+    /// <summary>
+    /// 復活（エディタテストプレイ用）
+    /// </summary>
+    public void Revive()
+    {
+        IsAlive = true;
+        IsInGoal = false;
+        gameObject.SetActive(true);
+        
+        var rb = GetComponent<Rigidbody2D>();
+        if (rb != null)
+        {
+            rb.velocity = Vector2.zero;
+        }
     }
 }

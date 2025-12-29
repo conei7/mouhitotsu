@@ -46,9 +46,58 @@ public class PlacementSystem : MonoBehaviour
         Instance = this;
     }
 
+    private const string AUTO_SAVE_KEY = "EditorAutoSave";
+
     private void Start()
     {
         CreatePreviewObject();
+        // 一時的: 自動保存データをクリア（フリーズ解消後に削除）
+        PlayerPrefs.DeleteKey(AUTO_SAVE_KEY);
+        
+        // 自動保存データがあれば読み込み（現在無効化）
+        // AutoLoad();
+    }
+
+    private void OnDestroy()
+    {
+        // シーン離脱時に自動保存
+        AutoSave();
+    }
+
+    private void OnApplicationQuit()
+    {
+        AutoSave();
+    }
+
+    private void AutoSave()
+    {
+        if (placedTiles.Count > 0)
+        {
+            string mapText = ToText();
+            PlayerPrefs.SetString(AUTO_SAVE_KEY, mapText);
+            PlayerPrefs.Save();
+        }
+    }
+
+    private void AutoLoad()
+    {
+        if (PlayerPrefs.HasKey(AUTO_SAVE_KEY))
+        {
+            string mapText = PlayerPrefs.GetString(AUTO_SAVE_KEY);
+            if (!string.IsNullOrEmpty(mapText) && (mapText.Contains("#") || mapText.Contains("S")))
+            {
+                LoadFromText(mapText);
+                Debug.Log("Auto-loaded previous map data");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 自動保存データをクリア
+    /// </summary>
+    public void ClearAutoSave()
+    {
+        PlayerPrefs.DeleteKey(AUTO_SAVE_KEY);
     }
 
     private void Update()
@@ -181,6 +230,12 @@ public class PlacementSystem : MonoBehaviour
 
     private void HandleInput()
     {
+        // テストプレイ中は編集無効
+        if (EditorManager.Instance != null && EditorManager.Instance.IsPlayMode)
+        {
+            return;
+        }
+
         // UI上にマウスがある場合は無視
         if (UnityEngine.EventSystems.EventSystem.current != null &&
             UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
@@ -232,11 +287,8 @@ public class PlacementSystem : MonoBehaviour
         });
         redoStack.Clear();
 
-        // 履歴制限
-        while (undoStack.Count > MAX_UNDO)
-        {
-            // 古いものを捨てる（Stackなので難しいが、とりあえず制限）
-        }
+        // 履歴制限（Stackは直接制限できないので一旦コメントアウト）
+        // TODO: 履歴が多すぎる場合の処理
     }
 
     /// <summary>
@@ -278,7 +330,14 @@ public class PlacementSystem : MonoBehaviour
             character.enabled = false;
         }
 
-        // 壁タイルの場合、レイヤーを設定
+        // Rigidbody2Dがあればシミュレーションを無効化（エディタモードでは物理演算させない）
+        var rb = obj.GetComponent<Rigidbody2D>();
+        if (rb != null)
+        {
+            rb.simulated = false;
+        }
+
+        // 壁タイルの場合
         if (tileType == '#')
         {
             // Groundレイヤーに設定
@@ -288,11 +347,36 @@ public class PlacementSystem : MonoBehaviour
                 obj.layer = groundLayer;
             }
             
-            // Edge Radiusを追加して継ぎ目を緩和
+            // Rigidbody2DがあればStaticにして物理演算から除外
+            var wallRb = obj.GetComponent<Rigidbody2D>();
+            if (wallRb != null)
+            {
+                wallRb.bodyType = RigidbodyType2D.Static;
+            }
+            
+            // コライダーサイズを明示的に1x1に（Static なので edgeRadius 不要）
             var boxCollider = obj.GetComponent<BoxCollider2D>();
             if (boxCollider != null)
             {
-                boxCollider.edgeRadius = 0.01f;
+                boxCollider.size = new Vector2(1f, 1f);
+                boxCollider.offset = Vector2.zero;
+            }
+        }
+
+        // 動的オブジェクト（Box）の設定
+        if (tileType == 'B')
+        {
+            var boxCollider = obj.GetComponent<BoxCollider2D>();
+            if (boxCollider != null)
+            {
+                // コライダーサイズを1x1に
+                boxCollider.size = new Vector2(1f, 1f);
+                
+                // 反発ゼロのPhysics Materialを設定
+                var mat = new PhysicsMaterial2D("BoxMaterial");
+                mat.friction = 0.4f;
+                mat.bounciness = 0f;
+                boxCollider.sharedMaterial = mat;
             }
         }
 

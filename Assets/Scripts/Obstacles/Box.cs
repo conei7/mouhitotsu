@@ -16,15 +16,27 @@ public class Box : MonoBehaviour
         rb.gravityScale = 0; // 自前で重力を適用
         rb.constraints = RigidbodyConstraints2D.FreezeRotation;
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        
+        // 摩擦と反発を設定
+        var mat = new PhysicsMaterial2D("BoxMat");
+        mat.friction = 0.4f;
+        mat.bounciness = 0f;
+        rb.sharedMaterial = mat;
     }
 
     private void Start()
     {
-        gravityController = FindObjectOfType<GravityController>();
+        gravityController = GravityController.Instance;
     }
 
     private void FixedUpdate()
     {
+        // GravityControllerがまだ見つかっていなければ探す
+        if (gravityController == null)
+        {
+            gravityController = GravityController.Instance;
+        }
+
         ApplyGravity();
     }
 
