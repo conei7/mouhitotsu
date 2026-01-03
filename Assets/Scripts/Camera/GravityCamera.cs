@@ -69,7 +69,13 @@ public class GravityCamera : MonoBehaviour
             var playerChar = player?.GetComponent<CharacterBase>();
             if (playerChar != null && playerChar.IsZeroGravity)
             {
-                // 壁法線の逆方向（足元方向）が画面下になるように
+                // 空中にいる場合はカメラの回転を更新しない（現在の角度を保持）
+                if (!playerChar.IsGrounded)
+                {
+                    return;
+                }
+                
+                // 接地時のみ、壁法線の逆方向（足元方向）が画面下になるように
                 Vector2 feetDir = -playerChar.ZeroGravityWallNormal;
                 targetRotation = Mathf.Atan2(feetDir.x, -feetDir.y) * Mathf.Rad2Deg;
             }

@@ -37,6 +37,11 @@ public class EditorManager : MonoBehaviour
 
     // テストプレイ前の状態を保存
     private Dictionary<Vector2Int, Vector3> savedPositions = new Dictionary<Vector2Int, Vector3>();
+    private Dictionary<Vector2Int, Quaternion> savedRotations = new Dictionary<Vector2Int, Quaternion>();
+
+    // 壁結合用のオブジェクト
+    private GameObject compositeWallObject;
+    private List<GameObject> hiddenWallObjects = new List<GameObject>();
 
     public bool IsPlayMode => isPlayMode;
 
@@ -181,6 +186,9 @@ public class EditorManager : MonoBehaviour
         // 配置済みオブジェクトを有効化
         EnablePlacedObjects(true);
 
+        // 壁をCompositeCollider2Dで結合（境目での跳ね防止）
+        CombineWallsForTestPlay();
+
         // GravityController生成
         if (gravityControllerPrefab != null)
         {
@@ -310,13 +318,14 @@ public class EditorManager : MonoBehaviour
                 rb.velocity = Vector2.zero;
             }
 
-            // 位置をリセット
+            // 位置と回転をリセット
             foreach (var kvp in placementSystem.PlacedTiles)
             {
                 if (kvp.Value.tileType == 'S')
                 {
                     Vector3 startPos = GridSystem.Instance.GridToWorld(kvp.Key);
                     testPlayer.transform.position = startPos;
+                    testPlayer.transform.rotation = Quaternion.identity; // 回転をリセット
                     break;
                 }
             }
@@ -335,6 +344,9 @@ public class EditorManager : MonoBehaviour
 
         // スイッチの状態をリセット
         ResetAllSwitches();
+
+        // 壁結合を解除
+        RestoreOriginalWalls();
 
         // 全オブジェクトの位置を復元
         RestoreAllPositions();
@@ -441,11 +453,12 @@ public class EditorManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 全オブジェクトの位置を保存
+    /// 全オブジェクトの位置と回転を保存
     /// </summary>
     private void SaveAllPositions()
     {
         savedPositions.Clear();
+        savedRotations.Clear();
         if (placementSystem == null) return;
 
         foreach (var kvp in placementSystem.PlacedTiles)
@@ -454,12 +467,13 @@ public class EditorManager : MonoBehaviour
             if (obj != null)
             {
                 savedPositions[kvp.Key] = obj.transform.position;
+                savedRotations[kvp.Key] = obj.transform.rotation;
             }
         }
     }
 
     /// <summary>
-    /// 全オブジェクトの位置を復元
+    /// 全オブジェクトの位置と回転を復元
     /// </summary>
     private void RestoreAllPositions()
     {
@@ -468,18 +482,121 @@ public class EditorManager : MonoBehaviour
         foreach (var kvp in placementSystem.PlacedTiles)
         {
             var obj = kvp.Value.gameObject;
-            if (obj != null && savedPositions.TryGetValue(kvp.Key, out Vector3 pos))
+            if (obj == null) continue;
+
+            // 位置を復元
+            if (savedPositions.TryGetValue(kvp.Key, out Vector3 pos))
             {
                 obj.transform.position = pos;
+            }
 
-                // Rigidbody2Dの速度もリセット
-                var rb = obj.GetComponent<Rigidbody2D>();
-                if (rb != null)
+            // 回転を復元
+            if (savedRotations.TryGetValue(kvp.Key, out Quaternion rot))
+            {
+                obj.transform.rotation = rot;
+            }
+
+            // Rigidbody2Dの速度と回転速度をリセット
+            var rb = obj.GetComponent<Rigidbody2D>();
+            if (rb != null)
+            {
+                rb.velocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+            }
+        }
+    }
+
+    /// <summary>
+    /// テストプレイ用に壁をCompositeCollider2Dで結合
+    /// </summary>
+    private void CombineWallsForTestPlay()
+    {
+        if (placementSystem == null) return;
+
+        // 壁を集める
+        List<Vector2Int> wallPositions = new List<Vector2Int>();
+        foreach (var kvp in placementSystem.PlacedTiles)
+        {
+            if (kvp.Value.tileType == '#')
+            {
+                wallPositions.Add(kvp.Key);
+            }
+        }
+
+        if (wallPositions.Count == 0) return;
+
+        // 壁結合用の親オブジェクトを生成
+        compositeWallObject = new GameObject("CompositeWalls");
+        compositeWallObject.layer = LayerMask.NameToLayer("Ground");
+
+        // Rigidbody2D（Static）を追加
+        var rb = compositeWallObject.AddComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Static;
+
+        // CompositeCollider2Dを追加
+        var compositeCollider = compositeWallObject.AddComponent<CompositeCollider2D>();
+        compositeCollider.geometryType = CompositeCollider2D.GeometryType.Polygons;
+
+        // 各壁位置にBoxCollider2Dを追加
+        hiddenWallObjects.Clear();
+        foreach (var pos in wallPositions)
+        {
+            // 元の壁オブジェクトを非表示にする
+            if (placementSystem.PlacedTiles.TryGetValue(pos, out PlacedTile tile))
+            {
+                if (tile.gameObject != null)
                 {
-                    rb.velocity = Vector2.zero;
+                    // コライダーを無効化（表示は維持）
+                    var originalCollider = tile.gameObject.GetComponent<Collider2D>();
+                    if (originalCollider != null)
+                    {
+                        originalCollider.enabled = false;
+                    }
+                    hiddenWallObjects.Add(tile.gameObject);
+                }
+            }
+
+            // 子オブジェクトとしてBoxCollider2Dを追加
+            var wallChild = new GameObject($"Wall_{pos.x}_{pos.y}");
+            wallChild.transform.SetParent(compositeWallObject.transform);
+            wallChild.transform.position = GridSystem.Instance.GridToWorld(pos);
+            wallChild.layer = LayerMask.NameToLayer("Ground");
+
+            var boxCollider = wallChild.AddComponent<BoxCollider2D>();
+            boxCollider.size = new Vector2(1f, 1f);
+            boxCollider.usedByComposite = true; // CompositeCollider2Dで結合
+        }
+
+        Debug.Log($"壁を結合しました: {wallPositions.Count}ブロック");
+    }
+
+    /// <summary>
+    /// 元の壁オブジェクトを復元
+    /// </summary>
+    private void RestoreOriginalWalls()
+    {
+        // 結合オブジェクトを削除
+        if (compositeWallObject != null)
+        {
+            Destroy(compositeWallObject);
+            compositeWallObject = null;
+        }
+
+        // 元の壁オブジェクトのコライダーを再有効化
+        foreach (var wallObj in hiddenWallObjects)
+        {
+            if (wallObj != null)
+            {
+                var collider = wallObj.GetComponent<Collider2D>();
+                if (collider != null)
+                {
+                    collider.enabled = true;
                 }
             }
         }
+        hiddenWallObjects.Clear();
+
+        Debug.Log("壁の結合を解除しました");
     }
 }
 

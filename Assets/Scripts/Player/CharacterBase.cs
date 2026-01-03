@@ -11,6 +11,8 @@ public class CharacterBase : MonoBehaviour
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 4f;
     [SerializeField] private float jumpForce = 8f;
+    [Tooltip("Shift押下時の速度倍率")]
+    [SerializeField] private float slowSpeedMultiplier = 0.1f;
 
     [Header("Ground Check")]
     [SerializeField] private float groundCheckDistance = 0.1f;
@@ -131,9 +133,14 @@ public class CharacterBase : MonoBehaviour
         {
             float moveComponent;
             
+            // Shift押下時はスロー移動
+            float speedMultiplier = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) 
+                ? slowSpeedMultiplier 
+                : 1f;
+            
             if (horizontalInput != 0)
             {
-                moveComponent = horizontalInput * moveSpeed;
+                moveComponent = horizontalInput * moveSpeed * speedMultiplier;
             }
             else
             {
