@@ -13,6 +13,7 @@
 5. [GameScene セットアップ](#gamescene-セットアップ)
 6. [Build Settings](#build-settings)
 7. [操作方法](#操作方法)
+8. [切り替え壁とボタン セットアップ](#切り替え壁とボタン-セットアップ)
 
 ---
 
@@ -852,3 +853,115 @@ AudioManager.Instance.SetMasterVolume(0.8f);
 AudioManager.Instance.SetBGMVolume(0.7f);
 AudioManager.Instance.SetSFXVolume(1.0f);
 ```
+
+---
+
+## 切り替え壁とボタン セットアップ
+
+ボタンを踏むと壁がオン/オフ切り替わるギミックです。チャンネル番号で複数組を管理できます。
+
+### 記号とチャンネルの対応
+
+| 記号 | オブジェクト | チャンネルID |
+|------|--------------|--------------|
+| `0`～`9` | 壁ボタン | 0～9 |
+| `a`～`j` | 切り替え壁 | 0～9 |
+
+例: `0` ボタンを踏むと `a` 壁がトグル、`1` ボタンを踏むと `b` 壁がトグル
+
+### 1. 切り替え壁のプレハブ作成（ToggleableWall）
+
+1. **Hierarchy > 右クリック > 2D Object > Sprites > Square**
+2. 名前を `ToggleableWall` に変更
+3. **Transform**:
+   - Scale: `(1, 1, 1)`
+4. **Add Component > Box Collider 2D**
+   - Size: `(1, 1)`
+   - **Is Trigger: オフ**（壁なので実体が必要）
+5. **Add Component > Toggleable Wall**（スクリプト）
+6. **SpriteRenderer** の設定:
+   - Sprite: 壁用のスプライト
+   - Color: 任意（スクリプトで制御されます）
+7. **Layer を `Ground` に設定**
+8. **Project（Assets/Prefabs/）にドラッグ** → プレハブ化
+9. Hierarchy のオブジェクトを削除
+
+#### ToggleableWall コンポーネントの設定
+
+| パラメータ | 説明 | デフォルト |
+|------------|------|------------|
+| Channel Id | このボタンで制御されるチャンネル | 0 |
+| Start Enabled | 初期状態でオンか | true |
+| Enabled Color | 有効時の色 | 白 |
+| Disabled Color | 無効時の色 | 半透明 |
+
+### 2. 壁ボタンのプレハブ作成（WallButton）
+
+1. **Hierarchy > 右クリック > 2D Object > Sprites > Square**
+2. 名前を `WallButton` に変更
+3. **Transform**:
+   - Scale: `(1, 0.3, 1)` ← 薄いボタン形状
+4. **Add Component > Box Collider 2D**
+   - Size: `(1, 1)`
+   - **Is Trigger: オン** ← 重要！
+5. **Add Component > Wall Button**（スクリプト）
+6. **SpriteRenderer** の設定:
+   - Sprite: ボタン用のスプライト
+   - Color: 任意
+7. **Project（Assets/Prefabs/）にドラッグ** → プレハブ化
+8. Hierarchy のオブジェクトを削除
+
+#### WallButton コンポーネントの設定
+
+| パラメータ | 説明 | デフォルト |
+|------------|------|------------|
+| Channel Id | 制御する壁のチャンネル | 0 |
+| Toggle Mode | true=押すたびにトグル / false=押している間のみ | true |
+| Cooldown | トグルモード時のクールダウン（秒） | 0.5 |
+| Normal Color | 通常時の色 | 白 |
+| Pressed Color | 押された時の色 | グレー |
+
+### 3. MapSettings にプレハブを登録
+
+1. **Project** ウィンドウで `Assets/Data/MapSettings.asset` を選択
+2. **Inspector** の **Prefabs - Toggleable** セクションで設定:
+
+| 欄 | 設定するプレハブ |
+|----|------------------|
+| Toggleable Wall Prefab | ToggleableWall |
+| Wall Button Prefab | WallButton |
+
+### 4. マップエディタでの使用
+
+マップエディタで以下のキーを使って配置できます:
+
+- **数字キー `0`～`9`**: ボタン（チャンネル0～9）
+- **小文字 `a`～`j`**: 切り替え壁（チャンネル0～9）
+
+### 5. テストプレイ
+
+1. マップエディタで `0` キーを押してボタンを配置
+2. `a` キーを押して切り替え壁を配置
+3. **Play** ボタンでテストプレイ
+4. プレイヤーでボタンを踏むと壁がトグルすることを確認
+
+### マップ例
+
+```
+####################
+#     aaa          #   ← a壁（チャンネル0）
+#   0         1    #   ← 0ボタンでa壁、1ボタンでb壁を切り替え
+#               bbb#   ← b壁（チャンネル1）
+# S            G   #
+####################
+```
+
+### 最終的な階層構造
+
+```
+Assets/
+└── Prefabs/
+    ├── ToggleableWall.prefab  (ToggleableWall.cs)
+    └── WallButton.prefab      (WallButton.cs)
+```
+

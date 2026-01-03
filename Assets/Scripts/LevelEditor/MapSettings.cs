@@ -49,6 +49,13 @@ public class MapSettings : ScriptableObject
     [Tooltip("扉")]
     public GameObject doorPrefab;
 
+    [Header("Prefabs - Toggleable")]
+    [Tooltip("切り替え壁（ボタンでオン/オフ）")]
+    public GameObject toggleableWallPrefab;
+    
+    [Tooltip("壁ボタン（切り替え壁を制御）")]
+    public GameObject wallButtonPrefab;
+
     [Header("Visual Settings")]
     [Tooltip("壁の色")]
     public Color wallColor = Color.white;
@@ -61,6 +68,18 @@ public class MapSettings : ScriptableObject
     /// </summary>
     public GameObject GetPrefab(char symbol)
     {
+        // 数字 0-9 はボタン（チャンネル0-9）
+        if (symbol >= '0' && symbol <= '9')
+        {
+            return wallButtonPrefab;
+        }
+        
+        // 小文字 a-j は切り替え壁（チャンネル0-9）
+        if (symbol >= 'a' && symbol <= 'j')
+        {
+            return toggleableWallPrefab;
+        }
+
         return symbol switch
         {
             '#' => wallPrefab,
@@ -79,10 +98,58 @@ public class MapSettings : ScriptableObject
     }
 
     /// <summary>
+    /// 記号からチャンネルIDを取得（ボタン/切り替え壁用）
+    /// </summary>
+    public static int GetChannelId(char symbol)
+    {
+        // 数字 0-9 → チャンネル 0-9
+        if (symbol >= '0' && symbol <= '9')
+        {
+            return symbol - '0';
+        }
+        
+        // 小文字 a-j → チャンネル 0-9
+        if (symbol >= 'a' && symbol <= 'j')
+        {
+            return symbol - 'a';
+        }
+        
+        return -1; // チャンネル対象外
+    }
+
+    /// <summary>
+    /// 記号がボタンかどうか
+    /// </summary>
+    public static bool IsWallButton(char symbol)
+    {
+        return symbol >= '0' && symbol <= '9';
+    }
+
+    /// <summary>
+    /// 記号が切り替え壁かどうか
+    /// </summary>
+    public static bool IsToggleableWall(char symbol)
+    {
+        return symbol >= 'a' && symbol <= 'j';
+    }
+
+    /// <summary>
     /// 記号の説明を取得
     /// </summary>
     public static string GetSymbolDescription(char symbol)
     {
+        // 数字 0-9 はボタン
+        if (symbol >= '0' && symbol <= '9')
+        {
+            return $"ボタン{symbol}";
+        }
+        
+        // 小文字 a-j は切り替え壁
+        if (symbol >= 'a' && symbol <= 'j')
+        {
+            return $"切替壁{(char)('0' + (symbol - 'a'))}";
+        }
+
         return symbol switch
         {
             '#' => "壁/床",
@@ -106,7 +173,11 @@ public class MapSettings : ScriptableObject
     /// </summary>
     public static char[] GetAllSymbols()
     {
-        return new char[] { '#', ' ', 'S', 'G', '^', 'v', '<', '>', 'X', '_', 'B', 'D' };
+        return new char[] { 
+            '#', ' ', 'S', 'G', '^', 'v', '<', '>', 'X', '_', 'B', 'D',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',  // ボタン
+            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'   // 切り替え壁
+        };
     }
 
     /// <summary>

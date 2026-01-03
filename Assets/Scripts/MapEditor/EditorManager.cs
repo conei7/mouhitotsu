@@ -114,6 +114,9 @@ public class EditorManager : MonoBehaviour
         // スイッチをリセット
         ResetAllSwitches();
 
+        // 切り替え壁をリセット
+        ToggleableWall.ResetAllWalls();
+
         // 重力をリセット
         Physics2D.gravity = new Vector2(0, -9.81f);
 
@@ -345,6 +348,9 @@ public class EditorManager : MonoBehaviour
         // スイッチの状態をリセット
         ResetAllSwitches();
 
+        // 切り替え壁をリセット
+        ToggleableWall.ResetAllWalls();
+
         // 壁結合を解除
         RestoreOriginalWalls();
 
@@ -427,6 +433,20 @@ public class EditorManager : MonoBehaviour
             if (goal != null)
             {
                 goal.enabled = enable;
+            }
+
+            // ToggleableWallを有効化
+            var toggleableWall = obj.GetComponent<ToggleableWall>();
+            if (toggleableWall != null)
+            {
+                toggleableWall.enabled = enable;
+            }
+
+            // WallButtonを有効化
+            var wallButton = obj.GetComponent<WallButton>();
+            if (wallButton != null)
+            {
+                wallButton.enabled = enable;
             }
         }
     }

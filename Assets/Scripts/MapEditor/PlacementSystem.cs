@@ -380,6 +380,33 @@ public class PlacementSystem : MonoBehaviour
             }
         }
 
+        // ボタン（0-9）のチャンネルID設定
+        if (MapSettings.IsWallButton(tileType))
+        {
+            var wallButton = obj.GetComponent<WallButton>();
+            if (wallButton != null)
+            {
+                wallButton.SetChannelId(MapSettings.GetChannelId(tileType));
+            }
+        }
+
+        // 切り替え壁（a-j）のチャンネルID設定
+        if (MapSettings.IsToggleableWall(tileType))
+        {
+            var toggleableWall = obj.GetComponent<ToggleableWall>();
+            if (toggleableWall != null)
+            {
+                toggleableWall.SetChannelId(MapSettings.GetChannelId(tileType));
+            }
+            
+            // Groundレイヤーに設定
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            if (groundLayer >= 0)
+            {
+                obj.layer = groundLayer;
+            }
+        }
+
         // 記録
         placedTiles[gridPos] = new PlacedTile
         {
