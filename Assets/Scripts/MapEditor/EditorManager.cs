@@ -114,8 +114,21 @@ public class EditorManager : MonoBehaviour
         // スイッチをリセット
         ResetAllSwitches();
 
+        // 壁ボタンをリセット
+        ResetAllWallButtons();
+
         // 切り替え壁をリセット
         ToggleableWall.ResetAllWalls();
+
+        // 切替壁グループのコライダーも同期
+        foreach (var kvp in compositeToggleableWalls)
+        {
+            var group = kvp.Value?.GetComponent<ToggleableWallGroup>();
+            if (group != null)
+            {
+                group.ResetState();
+            }
+        }
 
         // 重力をリセット
         Physics2D.gravity = new Vector2(0, -9.81f);
@@ -473,6 +486,26 @@ public class EditorManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 全壁ボタンの状態をリセット
+    /// </summary>
+    private void ResetAllWallButtons()
+    {
+        if (placementSystem == null) return;
+
+        foreach (var kvp in placementSystem.PlacedTiles)
+        {
+            var obj = kvp.Value.gameObject;
+            if (obj == null) continue;
+
+            var wallButton = obj.GetComponent<WallButton>();
+            if (wallButton != null)
+            {
+                wallButton.ResetButton();
+            }
+        }
+    }
+
+    /// <summary>
     /// 全オブジェクトの位置と回転を保存
     /// </summary>
     private void SaveAllPositions()
@@ -533,20 +566,56 @@ public class EditorManager : MonoBehaviour
     {
         if (placementSystem == null) return;
 
-        // 壁を集める
+        // 通常の壁を集める
         List<Vector2Int> wallPositions = new List<Vector2Int>();
+        
+        // 切替壁をチャンネルごとに集める
+        Dictionary<int, List<Vector2Int>> toggleableWallPositions = new Dictionary<int, List<Vector2Int>>();
+        
         foreach (var kvp in placementSystem.PlacedTiles)
         {
             if (kvp.Value.tileType == '#')
             {
                 wallPositions.Add(kvp.Key);
             }
+            else if (MapSettings.IsToggleableWall(kvp.Value.tileType))
+            {
+                int channelId = MapSettings.GetChannelId(kvp.Value.tileType);
+                if (!toggleableWallPositions.ContainsKey(channelId))
+                {
+                    toggleableWallPositions[channelId] = new List<Vector2Int>();
+                }
+                toggleableWallPositions[channelId].Add(kvp.Key);
+            }
         }
 
-        if (wallPositions.Count == 0) return;
+        hiddenWallObjects.Clear();
 
+        // 通常の壁を結合
+        if (wallPositions.Count > 0)
+        {
+            CombineWallGroup(wallPositions, "CompositeWalls", '#');
+        }
+
+        // 各チャンネルの切替壁を結合
+        foreach (var kvp in toggleableWallPositions)
+        {
+            int channelId = kvp.Key;
+            List<Vector2Int> positions = kvp.Value;
+            if (positions.Count > 0)
+            {
+                CombineToggleableWallGroup(positions, channelId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 通常壁グループを結合
+    /// </summary>
+    private void CombineWallGroup(List<Vector2Int> positions, string name, char tileType)
+    {
         // 壁結合用の親オブジェクトを生成
-        compositeWallObject = new GameObject("CompositeWalls");
+        compositeWallObject = new GameObject(name);
         compositeWallObject.layer = LayerMask.NameToLayer("Ground");
 
         // Rigidbody2D（Static）を追加
@@ -558,15 +627,13 @@ public class EditorManager : MonoBehaviour
         compositeCollider.geometryType = CompositeCollider2D.GeometryType.Polygons;
 
         // 各壁位置にBoxCollider2Dを追加
-        hiddenWallObjects.Clear();
-        foreach (var pos in wallPositions)
+        foreach (var pos in positions)
         {
-            // 元の壁オブジェクトを非表示にする
+            // 元の壁オブジェクトのコライダーを無効化
             if (placementSystem.PlacedTiles.TryGetValue(pos, out PlacedTile tile))
             {
                 if (tile.gameObject != null)
                 {
-                    // コライダーを無効化（表示は維持）
                     var originalCollider = tile.gameObject.GetComponent<Collider2D>();
                     if (originalCollider != null)
                     {
@@ -584,10 +651,69 @@ public class EditorManager : MonoBehaviour
 
             var boxCollider = wallChild.AddComponent<BoxCollider2D>();
             boxCollider.size = new Vector2(1f, 1f);
-            boxCollider.usedByComposite = true; // CompositeCollider2Dで結合
+            boxCollider.usedByComposite = true;
         }
 
-        Debug.Log($"壁を結合しました: {wallPositions.Count}ブロック");
+        Debug.Log($"壁を結合しました: {positions.Count}ブロック");
+    }
+
+    // 切替壁用の結合オブジェクトリスト
+    private Dictionary<int, GameObject> compositeToggleableWalls = new Dictionary<int, GameObject>();
+
+    /// <summary>
+    /// 切替壁グループを結合（チャンネル別）
+    /// </summary>
+    private void CombineToggleableWallGroup(List<Vector2Int> positions, int channelId)
+    {
+        // 切替壁結合用の親オブジェクトを生成
+        var compositeObj = new GameObject($"CompositeToggleableWalls_CH{channelId}");
+        compositeObj.layer = LayerMask.NameToLayer("Ground");
+
+        // Rigidbody2D（Static）を追加
+        var rb = compositeObj.AddComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Static;
+
+        // CompositeCollider2Dを追加（初期化完了まで無効化しておく）
+        var compositeCollider = compositeObj.AddComponent<CompositeCollider2D>();
+        compositeCollider.geometryType = CompositeCollider2D.GeometryType.Polygons;
+        compositeCollider.enabled = false; // 生成中の接触回避
+
+        // ToggleableWallGroupコンポーネントを追加（初期化は後で）
+        var toggleGroup = compositeObj.AddComponent<ToggleableWallGroup>();
+
+        // 各壁位置にBoxCollider2Dを追加
+        foreach (var pos in positions)
+        {
+            // 元の壁オブジェクトのコライダーを無効化（見た目は維持）
+            if (placementSystem.PlacedTiles.TryGetValue(pos, out PlacedTile tile))
+            {
+                if (tile.gameObject != null)
+                {
+                    var originalCollider = tile.gameObject.GetComponent<Collider2D>();
+                    if (originalCollider != null)
+                    {
+                        originalCollider.enabled = false;
+                    }
+                    hiddenWallObjects.Add(tile.gameObject);
+                }
+            }
+
+            // 子オブジェクトとしてBoxCollider2Dを追加
+            var wallChild = new GameObject($"ToggleWall_{pos.x}_{pos.y}");
+            wallChild.transform.SetParent(compositeObj.transform);
+            wallChild.transform.position = GridSystem.Instance.GridToWorld(pos);
+            wallChild.layer = LayerMask.NameToLayer("Ground");
+
+            var boxCollider = wallChild.AddComponent<BoxCollider2D>();
+            boxCollider.size = new Vector2(1f, 1f);
+            boxCollider.usedByComposite = true;
+        }
+
+        // 子コライダー追加後にInitialize（正しい初期状態を反映）
+        toggleGroup.Initialize(channelId, compositeCollider, positions, placementSystem);
+
+        compositeToggleableWalls[channelId] = compositeObj;
+        Debug.Log($"切替壁を結合しました (CH{channelId}): {positions.Count}ブロック");
     }
 
     /// <summary>
@@ -595,12 +721,22 @@ public class EditorManager : MonoBehaviour
     /// </summary>
     private void RestoreOriginalWalls()
     {
-        // 結合オブジェクトを削除
+        // 通常壁の結合オブジェクトを削除
         if (compositeWallObject != null)
         {
             Destroy(compositeWallObject);
             compositeWallObject = null;
         }
+
+        // 切替壁の結合オブジェクトを削除
+        foreach (var kvp in compositeToggleableWalls)
+        {
+            if (kvp.Value != null)
+            {
+                Destroy(kvp.Value);
+            }
+        }
+        compositeToggleableWalls.Clear();
 
         // 元の壁オブジェクトのコライダーを再有効化
         foreach (var wallObj in hiddenWallObjects)

@@ -4,20 +4,23 @@ using System.Collections.Generic;
 /// <summary>
 /// オン/オフ切り替え可能な壁
 /// 同じチャンネルIDのWallButtonで制御される
+/// チャンネルに応じて自動的に色が設定される
 /// </summary>
 public class ToggleableWall : MonoBehaviour
 {
     [Header("Channel Settings")]
-    [Tooltip("同じチャンネルIDのボタンで制御される")]
+    [Tooltip("同じチャンネルIDのボタンで制御される (0-9)")]
     [SerializeField] private int channelId = 0;
 
     [Header("Initial State")]
     [Tooltip("ゲーム開始時にオンかオフか")]
     [SerializeField] private bool startEnabled = true;
 
-    [Header("Appearance")]
-    [SerializeField] private Color enabledColor = Color.white;
-    [SerializeField] private Color disabledColor = new Color(1f, 1f, 1f, 0.3f);
+    [Header("Sprites")]
+    [Tooltip("有効状態のスプライト")]
+    [SerializeField] private Sprite enabledSprite;
+    [Tooltip("無効状態のスプライト")]
+    [SerializeField] private Sprite disabledSprite;
 
     private SpriteRenderer spriteRenderer;
     private Collider2D wallCollider;
@@ -25,6 +28,9 @@ public class ToggleableWall : MonoBehaviour
 
     // 全てのToggleableWallを管理（チャンネルID別）
     private static Dictionary<int, List<ToggleableWall>> allWalls = new Dictionary<int, List<ToggleableWall>>();
+
+    // チャンネルトグルイベント（結合壁用）
+    public static event System.Action<int> OnChannelToggled;
 
     public int ChannelId => channelId;
     public bool IsEnabled => isEnabled;
@@ -34,7 +40,29 @@ public class ToggleableWall : MonoBehaviour
     /// </summary>
     public void SetChannelId(int id)
     {
-        channelId = id;
+        // 既存のリストから削除
+        if (allWalls.ContainsKey(channelId))
+        {
+            allWalls[channelId].Remove(this);
+            if (allWalls[channelId].Count == 0)
+            {
+                allWalls.Remove(channelId);
+            }
+        }
+
+        channelId = Mathf.Clamp(id, 0, ChannelColors.ColorCount - 1);
+
+        // 新しいリストに追加
+        if (!allWalls.ContainsKey(channelId))
+        {
+            allWalls[channelId] = new List<ToggleableWall>();
+        }
+        if (!allWalls[channelId].Contains(this))
+        {
+            allWalls[channelId].Add(this);
+        }
+
+        UpdateVisual();
     }
 
     private void Awake()
@@ -42,24 +70,30 @@ public class ToggleableWall : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         wallCollider = GetComponent<Collider2D>();
         
-        // 初期状態を設定
         isEnabled = startEnabled;
+        UpdateVisual();
+    }
+
+    private void Start()
+    {
+        // 開始時に色を適用
         UpdateVisual();
     }
 
     private void OnEnable()
     {
-        // 静的リストに登録
         if (!allWalls.ContainsKey(channelId))
         {
             allWalls[channelId] = new List<ToggleableWall>();
         }
-        allWalls[channelId].Add(this);
+        if (!allWalls[channelId].Contains(this))
+        {
+            allWalls[channelId].Add(this);
+        }
     }
 
     private void OnDisable()
     {
-        // 静的リストから削除
         if (allWalls.ContainsKey(channelId))
         {
             allWalls[channelId].Remove(this);
@@ -89,6 +123,16 @@ public class ToggleableWall : MonoBehaviour
     }
 
     /// <summary>
+    /// 初期状態を設定（配置時に呼び出し）
+    /// </summary>
+    public void SetInitialState(bool enabled)
+    {
+        startEnabled = enabled;
+        isEnabled = enabled;
+        UpdateVisual();
+    }
+
+    /// <summary>
     /// 初期状態にリセット
     /// </summary>
     public void ResetToInitial()
@@ -105,11 +149,33 @@ public class ToggleableWall : MonoBehaviour
             wallCollider.enabled = isEnabled;
         }
 
-        // 見た目の更新
-        if (spriteRenderer != null)
+        if (spriteRenderer == null) return;
+
+        // スプライトを切り替え
+        if (enabledSprite != null && disabledSprite != null)
         {
-            spriteRenderer.color = isEnabled ? enabledColor : disabledColor;
+            spriteRenderer.sprite = isEnabled ? enabledSprite : disabledSprite;
         }
+
+        // チャンネル色を適用
+        if (isEnabled)
+        {
+            spriteRenderer.color = ChannelColors.GetColor(channelId);
+        }
+        else
+        {
+            spriteRenderer.color = ChannelColors.GetDisabledColor(channelId);
+        }
+    }
+
+    /// <summary>
+    /// スプライトを設定（エディタから呼び出し用）
+    /// </summary>
+    public void SetSprites(Sprite enabled, Sprite disabled)
+    {
+        enabledSprite = enabled;
+        disabledSprite = disabled;
+        UpdateVisual();
     }
 
     /// <summary>
@@ -124,6 +190,9 @@ public class ToggleableWall : MonoBehaviour
                 wall.Toggle();
             }
         }
+
+        // イベントを発火（結合壁グループに通知）
+        OnChannelToggled?.Invoke(channelId);
     }
 
     /// <summary>
@@ -154,14 +223,23 @@ public class ToggleableWall : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 静的リストをクリア（シーン遷移時用）
+    /// </summary>
+    public static void ClearAllWallsRegistry()
+    {
+        allWalls.Clear();
+    }
+
     private void OnValidate()
     {
-        // エディタで変更時にビジュアルを更新
         if (spriteRenderer == null)
             spriteRenderer = GetComponent<SpriteRenderer>();
         if (wallCollider == null)
             wallCollider = GetComponent<Collider2D>();
         
+        // エディタでチャンネルIDを変更したら色を更新
+        channelId = Mathf.Clamp(channelId, 0, 9);
         isEnabled = startEnabled;
         UpdateVisual();
     }

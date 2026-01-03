@@ -28,6 +28,15 @@ public class PlacementSystem : MonoBehaviour
     // スタート位置（1つのみ）
     private Vector2Int? startPosition = null;
 
+    // 現在のチャンネル（ボタン/切替壁用）
+    private int currentChannel = 0;
+
+    [Header("Sprites for Channel Objects")]
+    [SerializeField] private Sprite buttonNormalSprite;
+    [SerializeField] private Sprite buttonPressedSprite;
+    [SerializeField] private Sprite toggleWallOnSprite;
+    [SerializeField] private Sprite toggleWallOffSprite;
+
     // Undo/Redo用
     private Stack<UndoAction> undoStack = new Stack<UndoAction>();
     private Stack<UndoAction> redoStack = new Stack<UndoAction>();
@@ -380,23 +389,39 @@ public class PlacementSystem : MonoBehaviour
             }
         }
 
-        // ボタン（0-9）のチャンネルID設定
+        // ボタン（0-9）のチャンネルID設定とスプライト適用
         if (MapSettings.IsWallButton(tileType))
         {
             var wallButton = obj.GetComponent<WallButton>();
             if (wallButton != null)
             {
                 wallButton.SetChannelId(MapSettings.GetChannelId(tileType));
+                
+                // スプライトを設定
+                if (buttonNormalSprite != null && buttonPressedSprite != null)
+                {
+                    wallButton.SetSprites(buttonNormalSprite, buttonPressedSprite);
+                }
             }
         }
 
-        // 切り替え壁（a-j）のチャンネルID設定
+        // 切り替え壁（a-j: 初期ON, k-t: 初期OFF）のチャンネルID設定とスプライト適用
         if (MapSettings.IsToggleableWall(tileType))
         {
             var toggleableWall = obj.GetComponent<ToggleableWall>();
             if (toggleableWall != null)
             {
                 toggleableWall.SetChannelId(MapSettings.GetChannelId(tileType));
+                
+                // 初期状態を設定（k-t は初期OFF）
+                bool initiallyOff = MapSettings.IsToggleableWallInitiallyOff(tileType);
+                toggleableWall.SetInitialState(!initiallyOff);
+                
+                // スプライトを設定
+                if (toggleWallOnSprite != null && toggleWallOffSprite != null)
+                {
+                    toggleableWall.SetSprites(toggleWallOnSprite, toggleWallOffSprite);
+                }
             }
             
             // Groundレイヤーに設定
@@ -459,6 +484,22 @@ public class PlacementSystem : MonoBehaviour
     {
         currentTileType = tileType;
         UpdatePreviewSprite();
+    }
+
+    /// <summary>
+    /// 現在のチャンネルを設定（ボタン/切替壁用）
+    /// </summary>
+    public void SetCurrentChannel(int channel)
+    {
+        currentChannel = Mathf.Clamp(channel, 0, ChannelColors.ColorCount - 1);
+    }
+
+    /// <summary>
+    /// 現在のチャンネルを取得
+    /// </summary>
+    public int GetCurrentChannel()
+    {
+        return currentChannel;
     }
 
     /// <summary>

@@ -24,5 +24,7 @@ MonoBehaviour:
   fallZonePrefab: {fileID: 8739078034569369510, guid: f3d20d9d43d5a0c48a68c51fc05a9738, type: 3}
   boxPrefab: {fileID: 7484851622655942808, guid: fdf7655df4893ca44b837edebcc28e17, type: 3}
   doorPrefab: {fileID: 0}
+  toggleableWallPrefab: {fileID: 3623029278917982703, guid: 490e229b9da51ec4da577af67afdf6b1, type: 3}
+  wallButtonPrefab: {fileID: 8278006307197825645, guid: 903ddbb9f2bc42841a14c76336cc1889, type: 3}
   wallColor: {r: 1, g: 1, b: 1, a: 1}
   backgroundColor: {r: 0.1, g: 0.1, b: 0.2, a: 1}

@@ -3,41 +3,39 @@ using UnityEngine;
 /// <summary>
 /// 壁を切り替えるボタン
 /// 同じチャンネルIDのToggleableWallを制御する
+/// チャンネルに応じて自動的に色が設定される
+/// トグル式：押すたびにON/OFFが切り替わり、見た目も維持される
 /// </summary>
 public class WallButton : MonoBehaviour
 {
     [Header("Channel Settings")]
-    [Tooltip("制御するToggleableWallのチャンネルID")]
+    [Tooltip("制御するToggleableWallのチャンネルID (0-9)")]
     [SerializeField] private int channelId = 0;
 
     [Header("Button Behavior")]
-    [Tooltip("trueの場合、押すたびにトグル。falseの場合、押している間のみ有効")]
-    [SerializeField] private bool toggleMode = true;
-    
-    [Tooltip("トグルモード時のクールダウン（秒）")]
-    [SerializeField] private float cooldown = 0.5f;
+    [Tooltip("トグルのクールダウン（秒）")]
+    [SerializeField] private float cooldown = 1f;
 
-    [Header("Appearance")]
-    [SerializeField] private Color normalColor = Color.white;
-    [SerializeField] private Color pressedColor = Color.gray;
-    
-    [Header("Sprites (Optional)")]
+    [Header("Sprites")]
+    [Tooltip("通常状態のスプライト")]
     [SerializeField] private Sprite normalSprite;
+    [Tooltip("押された状態のスプライト")]
     [SerializeField] private Sprite pressedSprite;
 
     private SpriteRenderer spriteRenderer;
-    private bool isPressed = false;
+    private bool isActivated = false;  // トグル状態（押しっぱなし）
     private float lastPressTime = -999f;
-    private int objectsOnButton = 0; // ボタン上のオブジェクト数
 
     public int ChannelId => channelId;
+    public bool IsActivated => isActivated;
 
     /// <summary>
     /// チャンネルIDを設定（配置時に呼び出し）
     /// </summary>
     public void SetChannelId(int id)
     {
-        channelId = id;
+        channelId = Mathf.Clamp(id, 0, ChannelColors.ColorCount - 1);
+        UpdateVisual();
     }
 
     private void Awake()
@@ -46,63 +44,32 @@ public class WallButton : MonoBehaviour
         UpdateVisual();
     }
 
-    private void OnTriggerEnter2D(Collider2D collision)
+    private void Start()
     {
-        // プレイヤーまたは箱がボタンを押せる
-        bool isPlayer = collision.GetComponent<CharacterBase>() != null;
-        bool isBox = collision.GetComponent<Box>() != null;
-
-        if (isPlayer || isBox)
-        {
-            objectsOnButton++;
-            
-            if (toggleMode)
-            {
-                // トグルモード: 押すたびに切り替え
-                if (Time.time - lastPressTime >= cooldown)
-                {
-                    ToggleableWall.ToggleChannel(channelId);
-                    lastPressTime = Time.time;
-                    
-                    // ボタン音
-                    AudioManager.Instance?.PlaySwitch();
-                }
-            }
-            else
-            {
-                // ホールドモード: 押している間のみ有効
-                if (objectsOnButton == 1)
-                {
-                    ToggleableWall.ToggleChannel(channelId);
-                    AudioManager.Instance?.PlaySwitch();
-                }
-            }
-            
-            isPressed = true;
-            UpdateVisual();
-        }
+        // 開始時に色を適用
+        UpdateVisual();
     }
 
-    private void OnTriggerExit2D(Collider2D collision)
+    private void OnTriggerEnter2D(Collider2D collision)
     {
         bool isPlayer = collision.GetComponent<CharacterBase>() != null;
         bool isBox = collision.GetComponent<Box>() != null;
 
         if (isPlayer || isBox)
         {
-            objectsOnButton = Mathf.Max(0, objectsOnButton - 1);
+            // クールダウンチェック
+            if (Time.time - lastPressTime < cooldown) return;
+
+            // トグル：壁の状態を切り替え
+            ToggleableWall.ToggleChannel(channelId);
             
-            if (!toggleMode && objectsOnButton == 0)
-            {
-                // ホールドモード: 離れたら元に戻す
-                ToggleableWall.ToggleChannel(channelId);
-            }
+            // ボタン自身の状態もトグル（見た目維持用）
+            isActivated = !isActivated;
             
-            if (objectsOnButton == 0)
-            {
-                isPressed = false;
-                UpdateVisual();
-            }
+            lastPressTime = Time.time;
+            AudioManager.Instance?.PlaySwitch();
+            
+            UpdateVisual();
         }
     }
 
@@ -110,16 +77,20 @@ public class WallButton : MonoBehaviour
     {
         if (spriteRenderer == null) return;
 
-        // スプライトが設定されていれば切り替え
+        // スプライトを切り替え（トグル状態に基づく）
         if (normalSprite != null && pressedSprite != null)
         {
-            spriteRenderer.sprite = isPressed ? pressedSprite : normalSprite;
-            spriteRenderer.color = Color.white;
+            spriteRenderer.sprite = isActivated ? pressedSprite : normalSprite;
+        }
+
+        // チャンネル色を適用（トグル状態に基づく）
+        if (isActivated)
+        {
+            spriteRenderer.color = ChannelColors.GetPressedColor(channelId);
         }
         else
         {
-            // スプライトがなければ色で切り替え
-            spriteRenderer.color = isPressed ? pressedColor : normalColor;
+            spriteRenderer.color = ChannelColors.GetColor(channelId);
         }
     }
 
@@ -128,9 +99,18 @@ public class WallButton : MonoBehaviour
     /// </summary>
     public void ResetButton()
     {
-        isPressed = false;
-        objectsOnButton = 0;
+        isActivated = false;
         lastPressTime = -999f;
+        UpdateVisual();
+    }
+
+    /// <summary>
+    /// スプライトを設定（エディタから呼び出し用）
+    /// </summary>
+    public void SetSprites(Sprite normal, Sprite pressed)
+    {
+        normalSprite = normal;
+        pressedSprite = pressed;
         UpdateVisual();
     }
 
@@ -138,6 +118,9 @@ public class WallButton : MonoBehaviour
     {
         if (spriteRenderer == null)
             spriteRenderer = GetComponent<SpriteRenderer>();
+        
+        // エディタでチャンネルIDを変更したら色を更新
+        channelId = Mathf.Clamp(channelId, 0, 9);
         UpdateVisual();
     }
 }

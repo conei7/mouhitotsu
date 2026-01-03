@@ -94,6 +94,9 @@ public class MapGenerator : MonoBehaviour
         var composite = wallContainer.AddComponent<CompositeCollider2D>();
         composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
 
+        // 切替壁用のCompositeCollider2Dコンテナ（チャンネル別）
+        System.Collections.Generic.Dictionary<int, GameObject> toggleWallContainers = new System.Collections.Generic.Dictionary<int, GameObject>();
+
         for (int x = 0; x < mapData.Width; x++)
         {
             for (int y = 0; y < mapData.Height; y++)
@@ -106,7 +109,36 @@ public class MapGenerator : MonoBehaviour
                     Vector3 position = new Vector3(x * gridSize, y * gridSize, 0);
                     
                     // 壁は専用コンテナに入れる
-                    Transform parent = (symbol == '#') ? wallContainer.transform : objectsContainer;
+                    Transform parent = objectsContainer;
+                    if (symbol == '#')
+                    {
+                        parent = wallContainer.transform;
+                    }
+                    else if (MapSettings.IsToggleableWall(symbol))
+                    {
+                        int channelId = MapSettings.GetChannelId(symbol);
+                        if (!toggleWallContainers.ContainsKey(channelId))
+                        {
+                            // チャンネル別のコンテナを作成
+                            GameObject container = new GameObject($"ToggleableWalls_CH{channelId}");
+                            container.transform.SetParent(objectsContainer);
+                            container.layer = LayerMask.NameToLayer("Ground");
+                            
+                            var rb = container.AddComponent<Rigidbody2D>();
+                            rb.bodyType = RigidbodyType2D.Static;
+                            
+                            var comp = container.AddComponent<CompositeCollider2D>();
+                            comp.geometryType = CompositeCollider2D.GeometryType.Polygons;
+                            comp.enabled = false; // 初期化まで無効化
+
+                            // ToggleableWallGroupを追加
+                            var group = container.AddComponent<ToggleableWallGroup>();
+                            
+                            toggleWallContainers[channelId] = container;
+                        }
+                        parent = toggleWallContainers[channelId].transform;
+                    }
+                    
                     GameObject obj = Instantiate(prefab, position, Quaternion.identity, parent);
                     obj.name = $"{MapSettings.GetSymbolDescription(symbol)}_{x}_{y}";
                     
@@ -119,7 +151,50 @@ public class MapGenerator : MonoBehaviour
                             boxCollider.usedByComposite = true;
                         }
                     }
+
+                    // ボタン（0-9）のチャンネルID設定
+                    if (MapSettings.IsWallButton(symbol))
+                    {
+                        var wallButton = obj.GetComponent<WallButton>();
+                        if (wallButton != null)
+                        {
+                            wallButton.SetChannelId(MapSettings.GetChannelId(symbol));
+                        }
+                    }
+
+                    // 切替壁（a-j, k-t）のチャンネルID・初期状態設定
+                    if (MapSettings.IsToggleableWall(symbol))
+                    {
+                        var toggleableWall = obj.GetComponent<ToggleableWall>();
+                        if (toggleableWall != null)
+                        {
+                            toggleableWall.SetChannelId(MapSettings.GetChannelId(symbol));
+                            
+                            // 初期状態を設定（k-t は初期OFF）
+                            bool initiallyOff = MapSettings.IsToggleableWallInitiallyOff(symbol);
+                            toggleableWall.SetInitialState(!initiallyOff);
+                        }
+
+                        // コライダーをCompositeに使用
+                        var boxCollider = obj.GetComponent<BoxCollider2D>();
+                        if (boxCollider != null)
+                        {
+                            boxCollider.usedByComposite = true;
+                        }
+
+                        obj.layer = LayerMask.NameToLayer("Ground");
+                    }
                 }
+            }
+        }
+
+        // 切替壁グループを一括初期化（ここでコライダーの状態が確定）
+        foreach (var container in toggleWallContainers.Values)
+        {
+            var group = container.GetComponent<ToggleableWallGroup>();
+            if (group != null)
+            {
+                group.InitializeFromChildren();
             }
         }
 
