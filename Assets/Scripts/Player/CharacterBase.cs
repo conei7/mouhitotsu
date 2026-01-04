@@ -32,8 +32,11 @@ public class CharacterBase : MonoBehaviour
     private const float JUMP_COOLDOWN_TIME = 0.15f;
     
     // 無重力用
-    private Vector2 zeroGravityWallNormal = Vector2.up; // 現在接触している壁の法線
+    private Vector2 zeroGravityWallNormal = Vector2.up;
     private bool isZeroGravity = false;
+    private bool atCorner = false; // 角にいる状態
+    private Vector2 cornerWallNormal; // 角の先の壁の法線
+    private float lastHorizontalInput = 0f; // 前フレームの横入力
 
     public bool IsGrounded => isGrounded;
     public bool IsInGoal { get; private set; }
@@ -73,9 +76,24 @@ public class CharacterBase : MonoBehaviour
         UpdateDirections();
         
         // 入力
+        float prevInput = horizontalInput;
         horizontalInput = 0f;
         if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) horizontalInput = -1f;
         else if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) horizontalInput = 1f;
+        
+        // 角での回転チェック：入力を一度離して再度押した場合のみ曲がる
+        if (atCorner && isZeroGravity)
+        {
+            // 前フレームで入力が0で、今フレームで入力がある = 新規押下
+            bool newPress = (lastHorizontalInput == 0f && horizontalInput != 0f);
+            if (newPress)
+            {
+                // 角を曲がる
+                zeroGravityWallNormal = cornerWallNormal;
+                atCorner = false;
+            }
+        }
+        lastHorizontalInput = horizontalInput;
 
         // ジャンプ
         if (isGrounded && (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow)))
@@ -92,6 +110,8 @@ public class CharacterBase : MonoBehaviour
                 float currentMoveSpeed = Vector2.Dot(rb.velocity, moveDirection);
                 rb.velocity = moveDirection * currentMoveSpeed + jumpDirection * jumpForce;
             }
+            isGrounded = false; // ジャンプしたら非接地
+            atCorner = false;   // 角状態もリセット
             justJumped = true;
             jumpCooldown = JUMP_COOLDOWN_TIME;
             
@@ -131,6 +151,13 @@ public class CharacterBase : MonoBehaviour
         // 移動
         if (isGrounded)
         {
+            // 角にいる時は移動を止めて待機
+            if (atCorner && isZeroGravity)
+            {
+                rb.velocity = Vector2.zero;
+                return;
+            }
+            
             float moveComponent;
             
             // Shift押下時はスロー移動
@@ -245,46 +272,55 @@ public class CharacterBase : MonoBehaviour
             
             if (hit.collider != null)
             {
-                return; // まだ壁にいる
+                atCorner = false; // 壁の途中にいる
+                return;
             }
             
-            // 角を曲がるチェック（入力方向に壁があるか）
-            if (horizontalInput != 0)
+            // 現在の壁から離れた（角に来た）
+            // 隣接する壁を探す
+            Vector2 alongWall = new Vector2(zeroGravityWallNormal.y, -zeroGravityWallNormal.x);
+            
+            // 両方向をチェックして隣接壁を探す
+            Vector2 foundWallNormal = Vector2.zero;
+            foreach (float dir in new float[] { 1f, -1f })
             {
-                Vector2 alongWall = new Vector2(zeroGravityWallNormal.y, -zeroGravityWallNormal.x);
-                Vector2 nextWallDir = alongWall * horizontalInput;
+                Vector2 nextWallDir = alongWall * dir;
                 origin = center + nextWallDir * (extent * 0.9f);
-                hit = Physics2D.Raycast(origin, nextWallDir, checkDist + extent * 0.3f, groundLayer);
+                hit = Physics2D.Raycast(origin, nextWallDir, checkDist + extent * 0.5f, groundLayer);
                 
                 if (hit.collider != null)
                 {
-                    zeroGravityWallNormal = -nextWallDir.normalized;
-                    return;
+                    foundWallNormal = -nextWallDir.normalized;
+                    break;
                 }
             }
             
-            // 壁から離れた
+            if (foundWallNormal != Vector2.zero)
+            {
+                // 隣接壁がある→角にいる
+                if (!atCorner)
+                {
+                    // 新たに角に到達：現在の入力を記録
+                    lastHorizontalInput = horizontalInput;
+                }
+                atCorner = true;
+                cornerWallNormal = foundWallNormal;
+                // zeroGravityWallNormalは変更しない！Update()で新規押下時のみ変更
+                return;
+            }
+            
+            // 隣接壁がない→落下
+            atCorner = false;
             isGrounded = false;
         }
         
         // 2. 飛行中：速度の方向にだけ壁を探す
         Vector2 velocity = rb.velocity;
+        
+        // 速度がほぼゼロの場合は着地判定しない
+        // （コリジョン接触があればOnCollisionEnter2Dで処理される）
         if (velocity.sqrMagnitude < 0.1f)
         {
-            // 速度がほぼゼロなら全方向チェック（着地直後など）
-            Vector2[] directions = { Vector2.down, Vector2.up, Vector2.left, Vector2.right };
-            foreach (var dir in directions)
-            {
-                Vector2 origin = center + dir * (extent * 0.9f);
-                RaycastHit2D hit = Physics2D.Raycast(origin, dir, checkDist, groundLayer);
-                if (hit.collider != null)
-                {
-                    isGrounded = true;
-                    zeroGravityWallNormal = hit.normal;
-                    rb.velocity = Vector2.zero;
-                    return;
-                }
-            }
             return;
         }
         
@@ -305,41 +341,67 @@ public class CharacterBase : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        // 無重力時：壁の法線を取得（方向の参考用）
-        // 接地判定やvelocity停止はCheckGroundZeroGravityで行う
-        if (isZeroGravity && collision.contacts.Length > 0)
+        // 無重力時：飛行中に壁にぶつかった場合
+        if (!isZeroGravity || collision.contacts.Length == 0) return;
+        
+        // 既に接地している場合は何もしない
+        if (isGrounded) return;
+        
+        Vector2 normal = collision.contacts[0].normal;
+        Vector2 velocity = rb.velocity;
+        
+        // 速度が非常に小さい場合は判定しない（横接触で減速しても着地しない）
+        if (velocity.sqrMagnitude < 0.5f) return;
+        
+        // 速度方向と壁法線をチェック
+        // 壁に向かっている場合のみ着地
+        float dot = Vector2.Dot(velocity.normalized, normal);
+        
+        if (dot < -0.3f)
         {
-            // 今触れた壁の法線を記録（CheckGroundで使う可能性）
-            // ただしisGroundedは設定しない
+            // 正面衝突→着地
+            isGrounded = true;
+            zeroGravityWallNormal = normal;
+            rb.velocity = Vector2.zero;
         }
+        // 横接触は無視
     }
 
     private void OnCollisionStay2D(Collision2D collision)
     {
-        // 無重力時：角を曲がる時に法線を更新（すでにisGroundedの時のみ）
-        if (isZeroGravity && isGrounded && collision.contacts.Length > 0)
+        // 無重力時：角の検出（2つ以上の異なる法線がある場合）
+        if (!isZeroGravity || !isGrounded || collision.contacts.Length == 0) return;
+        
+        Vector2 currentNormal = zeroGravityWallNormal;
+        Vector2 otherNormal = Vector2.zero;
+        
+        // 現在の壁と異なる法線を探す
+        foreach (var contact in collision.contacts)
         {
-            Vector2 bestNormal = collision.contacts[0].normal;
-            
-            if (horizontalInput != 0 && collision.contacts.Length > 1)
+            Vector2 normal = contact.normal;
+            // 現在の法線と大きく異なる法線を探す（角にいる証拠）
+            float dot = Vector2.Dot(currentNormal, normal);
+            if (dot < 0.7f && normal.sqrMagnitude > 0.5f)
             {
-                Vector2 inputDir = moveDirection * horizontalInput;
-                float bestDot = -1f;
-                
-                foreach (var contact in collision.contacts)
-                {
-                    float dot = Mathf.Abs(Vector2.Dot(contact.normal, inputDir));
-                    if (dot > bestDot && dot > 0.5f)
-                    {
-                        bestDot = dot;
-                        bestNormal = contact.normal;
-                    }
-                }
+                otherNormal = normal;
+                break;
             }
-            
-            zeroGravityWallNormal = bestNormal;
-            // isGroundedはCheckGroundZeroGravityで既に設定されている
         }
+        
+        if (otherNormal != Vector2.zero)
+        {
+            // 角を検出した
+            if (!atCorner)
+            {
+                // 新たに角に到達：現在の入力を記録
+                lastHorizontalInput = horizontalInput;
+            }
+            atCorner = true;
+            cornerWallNormal = otherNormal;
+            // zeroGravityWallNormalは変更しない！Update()で新規押下時のみ変更
+        }
+        // 角が検出されなくてもatCornerはfalseにしない
+        // （角から離れたかどうかはCheckGroundZeroGravityで判定）
     }
 
     private Vector2 GetCurrentGravity()
