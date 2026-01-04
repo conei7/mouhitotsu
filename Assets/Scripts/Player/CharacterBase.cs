@@ -233,89 +233,92 @@ public class CharacterBase : MonoBehaviour
         Bounds bounds = boxCollider.bounds;
         Vector2 center = bounds.center;
         float extent = Mathf.Max(bounds.extents.x, bounds.extents.y);
-        float inset = extent * 0.9f; // 起点を少し内側に
+        float checkDist = groundCheckDistance + extent * 0.3f;
         
-        // 現在の壁方向（法線の逆）
-        Vector2 currentWallDir = -zeroGravityWallNormal;
-        
-        // まず現在の壁方向をチェック
-        Vector2 origin = center + currentWallDir * inset;
-        RaycastHit2D hit = Physics2D.Raycast(origin, currentWallDir, groundCheckDistance + extent * 0.2f, groundLayer);
-        
-        if (hit.collider != null)
+        // 1. 既に接地中の場合：現在の壁方向と角のチェック
+        if (isGrounded)
         {
-            // 現在の壁にまだ接触している
-            isGrounded = true;
+            // 現在の壁方向をチェック
+            Vector2 wallDir = -zeroGravityWallNormal;
+            Vector2 origin = center + wallDir * (extent * 0.9f);
+            RaycastHit2D hit = Physics2D.Raycast(origin, wallDir, checkDist, groundLayer);
+            
+            if (hit.collider != null)
+            {
+                return; // まだ壁にいる
+            }
+            
+            // 角を曲がるチェック（入力方向に壁があるか）
+            if (horizontalInput != 0)
+            {
+                Vector2 alongWall = new Vector2(zeroGravityWallNormal.y, -zeroGravityWallNormal.x);
+                Vector2 nextWallDir = alongWall * horizontalInput;
+                origin = center + nextWallDir * (extent * 0.9f);
+                hit = Physics2D.Raycast(origin, nextWallDir, checkDist + extent * 0.3f, groundLayer);
+                
+                if (hit.collider != null)
+                {
+                    zeroGravityWallNormal = -nextWallDir.normalized;
+                    return;
+                }
+            }
+            
+            // 壁から離れた
+            isGrounded = false;
+        }
+        
+        // 2. 飛行中：速度の方向にだけ壁を探す
+        Vector2 velocity = rb.velocity;
+        if (velocity.sqrMagnitude < 0.1f)
+        {
+            // 速度がほぼゼロなら全方向チェック（着地直後など）
+            Vector2[] directions = { Vector2.down, Vector2.up, Vector2.left, Vector2.right };
+            foreach (var dir in directions)
+            {
+                Vector2 origin = center + dir * (extent * 0.9f);
+                RaycastHit2D hit = Physics2D.Raycast(origin, dir, checkDist, groundLayer);
+                if (hit.collider != null)
+                {
+                    isGrounded = true;
+                    zeroGravityWallNormal = hit.normal;
+                    rb.velocity = Vector2.zero;
+                    return;
+                }
+            }
             return;
         }
         
-        // 現在の壁から離れた（角に来た）
-        // 移動方向の「先」にある壁を探す（角を曲がる）
-        // 移動方向 = 壁に沿った方向
-        Vector2 alongWall = new Vector2(zeroGravityWallNormal.y, -zeroGravityWallNormal.x);
+        // 速度方向に壁があるかチェック
+        Vector2 flyDir = velocity.normalized;
+        Vector2 rayOrigin = center + flyDir * (extent * 0.9f);
+        RaycastHit2D flyHit = Physics2D.Raycast(rayOrigin, flyDir, checkDist, groundLayer);
         
-        // プレイヤーが移動している方向に次の壁があるはず
-        // 角では、移動方向そのものが次の壁の法線になる
-        if (horizontalInput != 0)
+        if (flyHit.collider != null)
         {
-            Vector2 nextWallDir = alongWall * horizontalInput; // 移動している方向
-            origin = center + nextWallDir * inset;
-            hit = Physics2D.Raycast(origin, nextWallDir, groundCheckDistance + extent * 0.5f, groundLayer);
-            
-            if (hit.collider != null)
-            {
-                isGrounded = true;
-                zeroGravityWallNormal = -nextWallDir.normalized;
-                return;
-            }
-            
-            // 反対方向もチェック（内角の角）
-            nextWallDir = -alongWall * horizontalInput;
-            origin = center + nextWallDir * inset;
-            hit = Physics2D.Raycast(origin, nextWallDir, groundCheckDistance + extent * 0.5f, groundLayer);
-            
-            if (hit.collider != null)
-            {
-                isGrounded = true;
-                zeroGravityWallNormal = -nextWallDir.normalized;
-                return;
-            }
+            // 前方に壁がある→着地
+            isGrounded = true;
+            zeroGravityWallNormal = flyHit.normal;
+            rb.velocity = Vector2.zero;
         }
-        
-        // それでも見つからない場合、全方向をチェック
-        Vector2[] directions = { Vector2.down, Vector2.up, Vector2.left, Vector2.right };
-        isGrounded = false;
-        
-        foreach (var dir in directions)
-        {
-            origin = center + dir * inset;
-            hit = Physics2D.Raycast(origin, dir, groundCheckDistance + extent * 0.2f, groundLayer);
-            
-            if (hit.collider != null)
-            {
-                isGrounded = true;
-                zeroGravityWallNormal = -dir;
-                break;
-            }
-        }
+        // 前方に壁がない→飛び続ける（何もしない）
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        // 無重力で壁に衝突したら、その壁に張り付く
+        // 無重力時：壁の法線を取得（方向の参考用）
+        // 接地判定やvelocity停止はCheckGroundZeroGravityで行う
         if (isZeroGravity && collision.contacts.Length > 0)
         {
-            zeroGravityWallNormal = collision.contacts[0].normal;
-            rb.velocity = Vector2.zero; // 停止
+            // 今触れた壁の法線を記録（CheckGroundで使う可能性）
+            // ただしisGroundedは設定しない
         }
     }
 
     private void OnCollisionStay2D(Collision2D collision)
     {
-        // 無重力時、接触中は常に法線を更新（角を曲がるため）
-        if (isZeroGravity && collision.contacts.Length > 0)
+        // 無重力時：角を曲がる時に法線を更新（すでにisGroundedの時のみ）
+        if (isZeroGravity && isGrounded && collision.contacts.Length > 0)
         {
-            // 現在の入力方向に最も近い法線を選ぶ
             Vector2 bestNormal = collision.contacts[0].normal;
             
             if (horizontalInput != 0 && collision.contacts.Length > 1)
@@ -325,7 +328,6 @@ public class CharacterBase : MonoBehaviour
                 
                 foreach (var contact in collision.contacts)
                 {
-                    // 移動方向に垂直な法線（次の壁）を優先
                     float dot = Mathf.Abs(Vector2.Dot(contact.normal, inputDir));
                     if (dot > bestDot && dot > 0.5f)
                     {
@@ -336,7 +338,7 @@ public class CharacterBase : MonoBehaviour
             }
             
             zeroGravityWallNormal = bestNormal;
-            isGrounded = true;
+            // isGroundedはCheckGroundZeroGravityで既に設定されている
         }
     }
 
