@@ -88,14 +88,54 @@ public class CharacterBase : MonoBehaviour
             bool newPress = (lastHorizontalInput == 0f && horizontalInput != 0f);
             if (newPress)
             {
-                // 角を曲がる
-                zeroGravityWallNormal = cornerWallNormal;
-                atCorner = false;
+                // 入力方向が角の壁の方向かチェック
+                // moveDirection * horizontalInput = 入力方向
+                // -cornerWallNormal = 壁に向かう方向
+                float inputToWallDot = Vector2.Dot(moveDirection * horizontalInput, -cornerWallNormal);
+                
+                if (inputToWallDot > 0.3f)
+                {
+                    // 角の壁の方向に入力した→曲がる
+                    zeroGravityWallNormal = cornerWallNormal;
+                    atCorner = false;
+                }
+                // それ以外の方向（元の壁に沿う方向や反対方向）は曲がらない
             }
         }
         lastHorizontalInput = horizontalInput;
 
-        // ジャンプ
+        // 斜めジャンプ（Q:左斜め、E:右斜め）
+        float diagonalInput = 0f;
+        if (Input.GetKeyDown(KeyCode.Q)) diagonalInput = -1f;
+        else if (Input.GetKeyDown(KeyCode.E)) diagonalInput = 1f;
+
+        if (isGrounded && diagonalInput != 0f)
+        {
+            Vector2 jumpVec;
+            // 右方向ベクトル
+            Vector2 rightDir = moveDirection;
+            // 上方向ベクトル（通常時はジャンプ方向、無重力時は壁法線）
+            Vector2 upDir = isZeroGravity ? zeroGravityWallNormal : jumpDirection;
+
+            // 斜め方向を計算 (上 + 横)
+            Vector2 dir = (upDir + rightDir * diagonalInput).normalized;
+            
+            // 速度を適用（少し勢いをつけるために1.1倍）
+            rb.velocity = dir * (jumpForce * 1.1f);
+            
+            // ジャンプ共通処理
+            isGrounded = false;
+            atCorner = false;
+            justJumped = true;
+            jumpCooldown = JUMP_COOLDOWN_TIME;
+            
+            // ジャンプ音
+            AudioManager.Instance?.PlayJump();
+            
+            return; // 通常ジャンプと重複しないように終了
+        }
+
+        // 通常ジャンプ
         if (isGrounded && (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow)))
         {
             if (isZeroGravity)
@@ -331,6 +371,17 @@ public class CharacterBase : MonoBehaviour
         
         if (flyHit.collider != null)
         {
+            // 入力方向をチェック：壁から離れる方向に入力している場合は着地しない
+            if (horizontalInput != 0)
+            {
+                float inputDot = Vector2.Dot(moveDirection * horizontalInput, flyHit.normal);
+                if (inputDot > 0.3f)
+                {
+                    // 壁から離れる方向に入力している→着地しない
+                    return;
+                }
+            }
+            
             // 前方に壁がある→着地
             isGrounded = true;
             zeroGravityWallNormal = flyHit.normal;
@@ -359,6 +410,18 @@ public class CharacterBase : MonoBehaviour
         
         if (dot < -0.3f)
         {
+            // 入力方向をチェック：壁から離れる方向に入力している場合は着地しない
+            if (horizontalInput != 0)
+            {
+                // 入力方向と壁法線の内積
+                float inputDot = Vector2.Dot(moveDirection * horizontalInput, normal);
+                if (inputDot > 0.3f)
+                {
+                    // 壁から離れる方向に入力している→着地しない
+                    return;
+                }
+            }
+            
             // 正面衝突→着地
             isGrounded = true;
             zeroGravityWallNormal = normal;
