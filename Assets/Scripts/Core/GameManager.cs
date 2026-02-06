@@ -55,9 +55,8 @@ public class GameManager : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // 新しいシーンでプレイヤーを探す
-        currentPlayer = FindObjectOfType<CharacterBase>();
         isGameOver = false;
+        currentPlayer = null; // リセット
         
         // ステージシーンの場合、リトライ用に保存
         if (scene.name != clearSceneName && scene.name != gameOverSceneName && scene.name != titleSceneName)
@@ -69,7 +68,13 @@ public class GameManager : MonoBehaviour
     private void Update()
     {
         if (isGameOver) return;
-        if (currentPlayer == null) return;
+
+        // プレイヤーを探す（RuntimeMapLoaderが生成するまで待つ）
+        if (currentPlayer == null)
+        {
+            currentPlayer = FindObjectOfType<CharacterBase>();
+            if (currentPlayer == null) return;
+        }
 
         // リトライ（いつでも可能）
         if (Input.GetKeyDown(KeyCode.R))

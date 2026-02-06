@@ -22,13 +22,19 @@ public class ClearScreenUI : MonoBehaviour
 
     private void UpdateUI()
     {
-        int currentStage = StageManager.CurrentStage;
         bool hasNextStage = StageManager.HasNextStage();
 
         // ステージ番号表示
         if (stageText != null)
         {
-            stageText.text = $"Stage {currentStage}";
+            if (StageManager.CurrentStageData != null)
+            {
+                stageText.text = StageManager.CurrentStageData.name;
+            }
+            else
+            {
+                stageText.text = $"Stage {StageManager.CurrentStage}";
+            }
         }
 
         // メッセージ表示
@@ -75,3 +81,4 @@ public class ClearScreenUI : MonoBehaviour
         SceneManager.LoadScene(titleSceneName);
     }
 }
+

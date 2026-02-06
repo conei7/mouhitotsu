@@ -1,0 +1,26 @@
+{
+    "stages": [
+        {
+            "id": "stage_001",
+            "name": "Stage 1",
+            "mapText": "####################\n#                  #\n#                  #\n#        #        G#\n#                ###\n#                  #\n#                  #\n#       ###        #\n#S      ###        #\n#     > ###    ^   #\n####################",
+            "isBuiltIn": true,
+            "stageNumber": 1,
+            "cameraSize": 0,
+            "cameraOffsetX": 0,
+            "cameraOffsetY": 0,
+            "createdAt": 0
+        },
+        {
+            "id": "stage_002",
+            "name": "Stage 2",
+            "mapText": "          X_________###### \n          X         #   G#\n          X         #    #  \n          X         #    #\n          X    #         #\n          X    #         #\n###########    ##############\n#^             ###v  ###    #\n#              ###   ###   >#\n#XXX           ###   ###    #\n#                    ###    #\n#                    ###    #\n#     ###                   #\n#     ###                   #\n#     ###   X               #\n#           X     ###       #\n#           X     ###       #\n# S    ^    X     ###       #\n#############################",
+            "isBuiltIn": true,
+            "stageNumber": 2,
+            "cameraSize": 0,
+            "cameraOffsetX": 0,
+            "cameraOffsetY": 0,
+            "createdAt": 0
+        }
+    ]
+}
