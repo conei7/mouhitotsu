@@ -230,10 +230,11 @@ Assets/
 - Startボタン
 - 設定パネル（音量調整）
 - AudioManager（DontDestroyOnLoad）
-- GameManager
+- GameManager（DontDestroyOnLoad）
+- StageDatabase（DontDestroyOnLoad） - ステージデータ管理
 
-### Stage1 / Stage2
-- MapGenerator による自動生成マップ
+### GameScene (動的生成)
+- RuntimeMapLoader - JSONデータからマップを生成
 - Player
 - GravityController
 - GravityIndicatorUI（Canvas）
@@ -241,7 +242,7 @@ Assets/
 
 ### ClearScene
 - クリアメッセージ
-- Next Stageボタン（次ステージがある場合）
+- Next Stageボタン（動的に次のステージへ）
 - Retryボタン
 - Titleボタン
 
@@ -249,6 +250,34 @@ Assets/
 - Game Overメッセージ
 - Retryボタン
 - Titleボタン
+
+---
+
+## 動的マップ生成システム
+
+JSON形式のステージデータを読み込み、ランタイムでマップを生成します。
+
+### データ構造 (StageData.cs)
+```json
+{
+  "id": "stage_001",
+  "name": "Stage 1",
+  "mapText": "#####\n#S G#\n#####",
+  "isBuiltIn": true,
+  "stageNumber": 1
+}
+```
+
+### 生成フロー (RuntimeMapLoader.cs)
+1. `GameScene` 開始時に `StageManager` から `CurrentStageId` を取得
+2. `StageDatabase` から該当する `StageData` (JSON) を取得
+3. マップテキストを解析し、オブジェクトを配置
+4. 壁を `CompositeCollider2D` で最適化
+5. カメラ位置を自動調整
+
+### ステージ管理 (StageDatabase.cs)
+- **組み込みステージ**: `Resources/BuiltInStages.json`
+- **ユーザーステージ**: `PlayerPrefs` にJSON保存（将来のエディタ統合用）
 
 ---
 
@@ -336,3 +365,8 @@ Assets/
 - リトライ修正
 - 無重力壁歩き実装
 - 重力インジケーターUI実装
+
+### 2026-02-06
+- 動的マップ生成システム実装
+- JSONによるステージデータ管理
+- 単一ゲームシーン化 (GameScene)
