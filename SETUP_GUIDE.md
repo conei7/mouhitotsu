@@ -53,12 +53,16 @@
 | `Obstacles/FallZone.cs` | 落下死判定エリア |
 | `Obstacles/GravitySwitch.cs` | 重力切替スイッチ（オンオフトグル対応） |
 | `Obstacles/GravityOrb.cs` | 一時的重力オーブ |
+| `Core/StageData.cs` | ステージデータ構造（JSON保存用） |
+| `Core/StageDatabase.cs` | ステージデータベース管理（組み込み+ユーザー） |
+| `Core/RuntimeMapLoader.cs` | 動的マップ生成（JSONからマップ生成） |
 | `UI/GravityIndicatorUI.cs` | 重力インジケーターUI |
 | `UI/ClearScreenUI.cs` | クリア画面UI（次のステージ/リトライ/タイトル） |
 | `UI/VolumeSettingsUI.cs` | 音量設定UI |
-| `UI/TitleButton.cs` | タイトルのStartボタン |
+| `UI/TitleButton.cs` | タイトルのStartボタン、StageSelectボタン |
 | `UI/RetryButton.cs` | リトライボタン |
 | `UI/ToTitleButton.cs` | タイトルへ戻るボタン |
+| `UI/StageSelectUI.cs` | ステージ選択画面のリスト生成 |
 
 ---
 

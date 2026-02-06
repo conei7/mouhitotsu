@@ -31,4 +31,12 @@ public class TitleButton : MonoBehaviour
         }
         StageManager.GoToStage(nextStage);
     }
+
+    /// <summary>
+    /// ステージセレクト画面へ
+    /// </summary>
+    public void OnStageSelectClick()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene("StageSelectScene");
+    }
 }

@@ -227,11 +227,17 @@ Assets/
 
 ### TitleScene
 - タイトルテキスト
-- Startボタン
+- Startボタン（ステージ1から開始）
+- Stage Selectボタン（ステージ選択画面へ）
 - 設定パネル（音量調整）
 - AudioManager（DontDestroyOnLoad）
 - GameManager（DontDestroyOnLoad）
 - StageDatabase（DontDestroyOnLoad） - ステージデータ管理
+
+### StageSelectScene
+- ステージ一覧（Scroll View）
+- 各ステージボタン（クリアしていないステージはロック）
+- Backボタン（タイトルへ戻る）
 
 ### GameScene (動的生成)
 - RuntimeMapLoader - JSONデータからマップを生成
@@ -370,3 +376,5 @@ JSON形式のステージデータを読み込み、ランタイムでマップ�
 - 動的マップ生成システム実装
 - JSONによるステージデータ管理
 - 単一ゲームシーン化 (GameScene)
+- ステージセレクト画面実装
+
