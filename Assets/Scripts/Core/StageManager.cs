@@ -13,6 +13,11 @@ public static class StageManager
     private const string LAST_PLAYED_SCENE_KEY = "LastPlayedScene";
 
     /// <summary>
+    /// エディタのテストプレイ中かどうか
+    /// </summary>
+    public static bool IsEditorTestPlay { get; set; }
+
+    /// <summary>
     /// 動的生成用のゲームシーン名
     /// </summary>
     public const string GAME_SCENE = "GameScene";

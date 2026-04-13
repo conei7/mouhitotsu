@@ -60,11 +60,9 @@ public class PlacementSystem : MonoBehaviour
     private void Start()
     {
         CreatePreviewObject();
-        // 一時的: 自動保存データをクリア（フリーズ解消後に削除）
-        PlayerPrefs.DeleteKey(AUTO_SAVE_KEY);
-        
-        // 自動保存データがあれば読み込み（現在無効化）
-        // AutoLoad();
+
+        // 前回の編集内容があれば復元
+        AutoLoad();
     }
 
     private void OnDestroy()
@@ -83,7 +81,13 @@ public class PlacementSystem : MonoBehaviour
         if (placedTiles.Count > 0)
         {
             string mapText = ToText();
-            PlayerPrefs.SetString(AUTO_SAVE_KEY, mapText);
+            string compressed = MapTextCodec.EncodeIfSmaller(mapText);
+            PlayerPrefs.SetString(AUTO_SAVE_KEY, compressed);
+            PlayerPrefs.Save();
+        }
+        else if (PlayerPrefs.HasKey(AUTO_SAVE_KEY))
+        {
+            PlayerPrefs.DeleteKey(AUTO_SAVE_KEY);
             PlayerPrefs.Save();
         }
     }
@@ -92,7 +96,8 @@ public class PlacementSystem : MonoBehaviour
     {
         if (PlayerPrefs.HasKey(AUTO_SAVE_KEY))
         {
-            string mapText = PlayerPrefs.GetString(AUTO_SAVE_KEY);
+            string saved = PlayerPrefs.GetString(AUTO_SAVE_KEY);
+            string mapText = MapTextCodec.DecodeIfNeeded(saved);
             if (!string.IsNullOrEmpty(mapText) && (mapText.Contains("#") || mapText.Contains("S")))
             {
                 LoadFromText(mapText);

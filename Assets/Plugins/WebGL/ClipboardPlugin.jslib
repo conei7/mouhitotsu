@@ -1,41 +1,55 @@
 mergeInto(LibraryManager.library, {
-    CopyToClipboard: function(textPtr) {
+    DownloadTextFile: function(fileNamePtr, textPtr) {
+        var fileName = UTF8ToString(fileNamePtr);
         var text = UTF8ToString(textPtr);
-        
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(function() {
-                console.log('Copied to clipboard');
-            }).catch(function(err) {
-                console.error('Failed to copy: ', err);
-                // Fallback
-                prompt('Copy this text:', text);
-            });
-        } else {
-            // Fallback for older browsers
-            prompt('Copy this text:', text);
+
+        try {
+            var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = fileName || 'map.txt';
+            anchor.style.display = 'none';
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+            console.log('Download started: ' + anchor.download);
+        } catch (err) {
+            console.error('Failed to start download: ', err);
+            prompt('Save this text manually:', text);
         }
     },
     
-    PasteFromClipboard: function(gameObjectNamePtr, methodNamePtr) {
+    OpenTextFilePicker: function(gameObjectNamePtr, methodNamePtr) {
         var gameObjectName = UTF8ToString(gameObjectNamePtr);
         var methodName = UTF8ToString(methodNamePtr);
-        
-        if (navigator.clipboard && navigator.clipboard.readText) {
-            navigator.clipboard.readText().then(function(text) {
-                SendMessage(gameObjectName, methodName, text);
-            }).catch(function(err) {
-                console.error('Failed to paste: ', err);
-                var text = prompt('Paste your text here:');
-                if (text) {
-                    SendMessage(gameObjectName, methodName, text);
-                }
-            });
-        } else {
-            // Fallback for older browsers
-            var text = prompt('Paste your text here:');
-            if (text) {
-                SendMessage(gameObjectName, methodName, text);
+
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.txt,.map,text/plain';
+        input.style.display = 'none';
+
+        input.addEventListener('change', function() {
+            if (!input.files || input.files.length === 0) {
+                document.body.removeChild(input);
+                return;
             }
-        }
+
+            var file = input.files[0];
+            var reader = new FileReader();
+            reader.onload = function() {
+                SendMessage(gameObjectName, methodName, reader.result);
+                document.body.removeChild(input);
+            };
+            reader.onerror = function(err) {
+                console.error('Failed to read file: ', err);
+                document.body.removeChild(input);
+            };
+            reader.readAsText(file);
+        });
+
+        document.body.appendChild(input);
+        input.click();
     }
 });

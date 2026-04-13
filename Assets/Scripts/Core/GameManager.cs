@@ -16,6 +16,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private string clearSceneName = "ClearScene";
     [SerializeField] private string gameOverSceneName = "GameOverScene";
     [SerializeField] private string titleSceneName = "TitleScene";
+    [SerializeField] private string editorSceneName = "EditorScene";
 
     private bool isGameOver = false;
     private CharacterBase currentPlayer;
@@ -59,7 +60,7 @@ public class GameManager : MonoBehaviour
         currentPlayer = null; // リセット
         
         // ステージシーンの場合、リトライ用に保存
-        if (scene.name != clearSceneName && scene.name != gameOverSceneName && scene.name != titleSceneName)
+        if (scene.name != clearSceneName && scene.name != gameOverSceneName && scene.name != titleSceneName && scene.name != editorSceneName)
         {
             StageManager.LastPlayedScene = scene.name;
         }
@@ -105,7 +106,14 @@ public class GameManager : MonoBehaviour
         // ステージクリア記録
         StageManager.ClearCurrentStage();
         
-        SceneManager.LoadScene(clearSceneName);
+        if (StageManager.IsEditorTestPlay)
+        {
+            SceneManager.LoadScene(editorSceneName);
+        }
+        else
+        {
+            SceneManager.LoadScene(clearSceneName);
+        }
     }
 
     public void Retry()

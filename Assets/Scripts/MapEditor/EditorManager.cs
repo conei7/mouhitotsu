@@ -174,6 +174,7 @@ public class EditorManager : MonoBehaviour
             return;
         }
 
+        StageManager.IsEditorTestPlay = true;
         isPlayMode = true;
 
         // 全オブジェクトの位置を保存
@@ -297,6 +298,7 @@ public class EditorManager : MonoBehaviour
     {
         if (!isPlayMode) return;
 
+        StageManager.IsEditorTestPlay = false;
         isPlayMode = false;
 
         // テストプレイUI削除

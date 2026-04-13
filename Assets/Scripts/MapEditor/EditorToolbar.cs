@@ -1,7 +1,13 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System;
+using System.IO;
 using System.Runtime.InteropServices;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// エディタツールバー - 各種ボタンと情報表示
@@ -23,10 +29,10 @@ public class EditorToolbar : MonoBehaviour
 
 #if UNITY_WEBGL && !UNITY_EDITOR
     [DllImport("__Internal")]
-    private static extern void CopyToClipboard(string text);
+    private static extern void DownloadTextFile(string fileName, string text);
 
     [DllImport("__Internal")]
-    private static extern void PasteFromClipboard(string gameObjectName, string methodName);
+    private static extern void OpenTextFilePicker(string gameObjectName, string methodName);
 #endif
 
     private void Start()
@@ -87,12 +93,17 @@ public class EditorToolbar : MonoBehaviour
             return;
         }
 
+            string compressedText = MapTextCodec.EncodeIfSmaller(mapText);
+        string fileName = BuildDefaultFileName();
+
 #if UNITY_WEBGL && !UNITY_EDITOR
-        CopyToClipboard(mapText);
+    DownloadTextFile(fileName, compressedText);
+    Debug.Log($"Map download started: {fileName}");
+#elif UNITY_EDITOR
+    SaveWithDialog(fileName, compressedText);
 #else
-        GUIUtility.systemCopyBuffer = mapText;
+    SaveTextToFile(fileName, compressedText);
 #endif
-        Debug.Log("Map copied to clipboard!");
     }
 
     private void OnLoadClick()
@@ -100,35 +111,105 @@ public class EditorToolbar : MonoBehaviour
         if (placementSystem == null) return;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
-        PasteFromClipboard(gameObject.name, "OnClipboardPaste");
+        OpenTextFilePicker(gameObject.name, "OnFileSelected");
 #else
-        string mapText = GUIUtility.systemCopyBuffer;
-        LoadMapFromText(mapText);
+        OpenLoadDialog();
 #endif
     }
 
     // WebGLからのコールバック
-    public void OnClipboardPaste(string mapText)
+    public void OnFileSelected(string mapText)
     {
         LoadMapFromText(mapText);
+    }
+
+#if UNITY_EDITOR
+    private void OpenLoadDialog()
+    {
+        string path = EditorUtility.OpenFilePanel("マップファイルを選択", "", "txt,map");
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        try
+        {
+            string mapText = File.ReadAllText(path);
+            LoadMapFromText(mapText);
+            Debug.Log($"Map loaded from file: {path}");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Failed to load map file: {e.Message}");
+        }
+    }
+#else
+    private void OpenLoadDialog()
+    {
+        string mapText = GUIUtility.systemCopyBuffer;
+        LoadMapFromText(mapText);
+    }
+#endif
+
+    private void SaveTextToFile(string fileName, string text)
+    {
+        string path = Path.Combine(Application.persistentDataPath, fileName);
+
+        try
+        {
+            File.WriteAllText(path, text);
+            Debug.Log($"Map saved to: {path}");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Failed to save map file: {e.Message}");
+        }
+    }
+
+#if UNITY_EDITOR
+    private void SaveWithDialog(string fileName, string text)
+    {
+        string path = EditorUtility.SaveFilePanel("マップを保存", "", fileName, "txt");
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        try
+        {
+            File.WriteAllText(path, text);
+            Debug.Log($"Map saved to: {path}");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Failed to save map file: {e.Message}");
+        }
+    }
+#endif
+
+    private string BuildDefaultFileName()
+    {
+        return $"mouhitotsu_map_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
     }
 
     private void LoadMapFromText(string mapText)
     {
         if (string.IsNullOrEmpty(mapText))
         {
-            Debug.Log("Clipboard is empty");
+            Debug.Log("No map data provided");
             return;
         }
 
-        if (!mapText.Contains("#") && !mapText.Contains("S"))
+        string decodedMapText = MapTextCodec.DecodeIfNeeded(mapText);
+
+        if (!decodedMapText.Contains("#") && !decodedMapText.Contains("S"))
         {
             Debug.Log("No valid map data in clipboard");
             return;
         }
 
-        placementSystem.LoadFromText(mapText);
-        Debug.Log("Map loaded from clipboard!");
+        placementSystem.LoadFromText(decodedMapText);
+        Debug.Log("Map loaded!");
     }
 
     private void OnTestPlayClick()

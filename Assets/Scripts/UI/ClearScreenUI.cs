@@ -14,6 +14,7 @@ public class ClearScreenUI : MonoBehaviour
 
     [Header("Scene Names")]
     [SerializeField] private string titleSceneName = "TitleScene";
+    [SerializeField] private string editorSceneName = "EditorScene";
 
     private void Start()
     {

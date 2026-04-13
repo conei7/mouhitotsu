@@ -59,8 +59,9 @@ public class StageData
     {
         get
         {
-            if (string.IsNullOrEmpty(mapText)) return 0;
-            string[] lines = mapText.Split('\n');
+            string resolvedMapText = GetResolvedMapText();
+            if (string.IsNullOrEmpty(resolvedMapText)) return 0;
+            string[] lines = resolvedMapText.Split('\n');
             int maxWidth = 0;
             foreach (var line in lines)
             {
@@ -78,8 +79,9 @@ public class StageData
     {
         get
         {
-            if (string.IsNullOrEmpty(mapText)) return 0;
-            return mapText.Split('\n').Length;
+            string resolvedMapText = GetResolvedMapText();
+            if (string.IsNullOrEmpty(resolvedMapText)) return 0;
+            return resolvedMapText.Split('\n').Length;
         }
     }
 
@@ -88,9 +90,10 @@ public class StageData
     /// </summary>
     public char[,] GetMapArray()
     {
-        if (string.IsNullOrEmpty(mapText)) return new char[0, 0];
+        string resolvedMapText = GetResolvedMapText();
+        if (string.IsNullOrEmpty(resolvedMapText)) return new char[0, 0];
 
-        string[] lines = mapText.Split('\n');
+        string[] lines = resolvedMapText.Split('\n');
         int height = lines.Length;
         int width = Width;
 
@@ -122,14 +125,16 @@ public class StageData
     {
         errorMessage = "";
 
-        if (string.IsNullOrEmpty(mapText))
+        string resolvedMapText = GetResolvedMapText();
+
+        if (string.IsNullOrEmpty(resolvedMapText))
         {
             errorMessage = "マップテキストが空です";
             return false;
         }
 
-        bool hasStart = mapText.Contains("S");
-        bool hasGoal = mapText.Contains("G");
+        bool hasStart = resolvedMapText.Contains("S");
+        bool hasGoal = resolvedMapText.Contains("G");
 
         if (!hasStart)
         {
@@ -163,6 +168,11 @@ public class StageData
             cameraOffsetY = 0,
             createdAt = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds()
         };
+    }
+
+    public string GetResolvedMapText()
+    {
+        return MapTextCodec.DecodeIfNeeded(mapText);
     }
 }
 

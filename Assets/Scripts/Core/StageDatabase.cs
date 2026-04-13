@@ -192,6 +192,7 @@ public class StageDatabase : MonoBehaviour
     public void SaveUserStage(StageData stage)
     {
         stage.isBuiltIn = false;
+        stage.mapText = MapTextCodec.EncodeIfSmaller(MapTextCodec.DecodeIfNeeded(stage.mapText));
 
         int index = userStages.FindIndex(s => s.id == stage.id);
         if (index >= 0)
