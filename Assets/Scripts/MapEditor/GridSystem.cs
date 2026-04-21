@@ -52,10 +52,27 @@ public class GridSystem : MonoBehaviour
     }
 
     /// <summary>
+    /// 画面座標からグリッド座標を取得
+    /// </summary>
+    public Vector2Int GetScreenGridPosition(Vector2 screenPosition)
+    {
+        Vector3 worldPos = Camera.main.ScreenToWorldPoint(screenPosition);
+        return WorldToGrid(worldPos);
+    }
+
+    /// <summary>
     /// マウス位置のワールド座標（グリッドにスナップ）を取得
     /// </summary>
     public Vector3 GetMouseWorldPositionSnapped()
     {
         return GridToWorld(GetMouseGridPosition());
+    }
+
+    /// <summary>
+    /// 画面座標に対応するスナップ済みワールド座標を取得
+    /// </summary>
+    public Vector3 GetScreenWorldPositionSnapped(Vector2 screenPosition)
+    {
+        return GridToWorld(GetScreenGridPosition(screenPosition));
     }
 }

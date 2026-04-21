@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// エディタ用カメラ - パン/ズーム操作
@@ -11,8 +12,12 @@ public class EditorCamera : MonoBehaviour
 
     [Header("Zoom Settings")]
     [SerializeField] private float zoomSpeed = 5f;
+    [SerializeField] private float pinchZoomSpeed = 0.02f;
     [SerializeField] private float minZoom = 2f;
     [SerializeField] private float maxZoom = 20f;
+
+    [Header("Touch Camera Control")]
+    [SerializeField] private float touchPanSpeed = 1f;
 
     [Header("Mouse Pan")]
     [SerializeField] private bool enableMiddleMousePan = true;
@@ -20,6 +25,9 @@ public class EditorCamera : MonoBehaviour
     private Camera cam;
     private Vector3 lastMousePosition;
     private bool isPanning = false;
+    private bool isPinching = false;
+    private float lastPinchDistance = 0f;
+    private Vector2 lastTouchMidpoint;
 
     private void Awake()
     {
@@ -33,6 +41,7 @@ public class EditorCamera : MonoBehaviour
     private void Update()
     {
         HandleKeyboardPan();
+        HandleTouchPanAndZoom();
         HandleMousePan();
         HandleZoom();
     }
@@ -98,6 +107,65 @@ public class EditorCamera : MonoBehaviour
             float newSize = cam.orthographicSize - scroll * zoomSpeed;
             cam.orthographicSize = Mathf.Clamp(newSize, minZoom, maxZoom);
         }
+    }
+
+    private void HandleTouchPanAndZoom()
+    {
+        if (!Input.touchSupported || Input.touchCount < 2)
+        {
+            isPinching = false;
+            return;
+        }
+
+        Touch touch0 = Input.GetTouch(0);
+        Touch touch1 = Input.GetTouch(1);
+
+        if (IsTouchOverUI(touch0) || IsTouchOverUI(touch1))
+        {
+            isPinching = false;
+            return;
+        }
+
+        Vector2 currentMidpoint = (touch0.position + touch1.position) * 0.5f;
+        float currentDistance = Vector2.Distance(touch0.position, touch1.position);
+
+        if (!isPinching || touch0.phase == TouchPhase.Began || touch1.phase == TouchPhase.Began)
+        {
+            isPinching = true;
+            lastTouchMidpoint = currentMidpoint;
+            lastPinchDistance = currentDistance;
+            return;
+        }
+
+        Vector2 midpointDelta = currentMidpoint - lastTouchMidpoint;
+        if (midpointDelta.sqrMagnitude > 0.01f)
+        {
+            Vector3 prevWorld = cam.ScreenToWorldPoint(new Vector3(lastTouchMidpoint.x, lastTouchMidpoint.y, cam.nearClipPlane));
+            Vector3 currentWorld = cam.ScreenToWorldPoint(new Vector3(currentMidpoint.x, currentMidpoint.y, cam.nearClipPlane));
+            Vector3 worldDelta = prevWorld - currentWorld;
+            worldDelta.z = 0f;
+            transform.position += worldDelta * touchPanSpeed;
+        }
+
+        float pinchDelta = currentDistance - lastPinchDistance;
+        if (Mathf.Abs(pinchDelta) > 0.01f)
+        {
+            float newSize = cam.orthographicSize - pinchDelta * pinchZoomSpeed;
+            cam.orthographicSize = Mathf.Clamp(newSize, minZoom, maxZoom);
+        }
+
+        lastTouchMidpoint = currentMidpoint;
+        lastPinchDistance = currentDistance;
+    }
+
+    private bool IsTouchOverUI(Touch touch)
+    {
+        if (EventSystem.current == null)
+        {
+            return false;
+        }
+
+        return EventSystem.current.IsPointerOverGameObject(touch.fingerId);
     }
 
     /// <summary>

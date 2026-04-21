@@ -17,6 +17,10 @@ public class PlacementSystem : MonoBehaviour
 
     [Header("Current Selection")]
     [SerializeField] private char currentTileType = '#';
+    [SerializeField] private bool isDeleteMode = false;
+
+    [Header("Touch Input Guard")]
+    [SerializeField] private float postPinchInputBlockSeconds = 0.12f;
 
     // 配置済みタイル管理
     private Dictionary<Vector2Int, PlacedTile> placedTiles = new Dictionary<Vector2Int, PlacedTile>();
@@ -41,8 +45,11 @@ public class PlacementSystem : MonoBehaviour
     private Stack<UndoAction> undoStack = new Stack<UndoAction>();
     private Stack<UndoAction> redoStack = new Stack<UndoAction>();
     private const int MAX_UNDO = 100;
+    private float blockEditUntilTime = 0f;
+    private bool hasActiveMultiTouchGesture = false;
 
     public char CurrentTileType => currentTileType;
+    public bool IsDeleteMode => isDeleteMode;
     public Dictionary<Vector2Int, PlacedTile> PlacedTiles => placedTiles;
 
     private void Awake()
@@ -211,6 +218,13 @@ public class PlacementSystem : MonoBehaviour
     {
         if (previewRenderer == null) return;
 
+        if (isDeleteMode)
+        {
+            previewRenderer.sprite = null;
+            previewRenderer.color = deletePreviewColor;
+            return;
+        }
+
         GameObject prefab = mapSettings?.GetPrefab(currentTileType);
         if (prefab != null)
         {
@@ -227,12 +241,31 @@ public class PlacementSystem : MonoBehaviour
     {
         if (previewObject == null || GridSystem.Instance == null) return;
 
+        bool isMultiTouch = Input.touchSupported && Input.touchCount >= 2;
+        bool isTouchBlocked = Time.unscaledTime < blockEditUntilTime || hasActiveMultiTouchGesture;
+        if (isMultiTouch || isTouchBlocked)
+        {
+            if (previewObject.activeSelf)
+            {
+                previewObject.SetActive(false);
+            }
+            return;
+        }
+        else if (!previewObject.activeSelf)
+        {
+            previewObject.SetActive(true);
+        }
+
         Vector3 snappedPos = GridSystem.Instance.GetMouseWorldPositionSnapped();
         previewObject.transform.position = snappedPos;
 
         // 既存タイルがある場所は削除プレビュー色
         Vector2Int gridPos = GridSystem.Instance.GetMouseGridPosition();
-        if (placedTiles.ContainsKey(gridPos))
+        if (isDeleteMode)
+        {
+            previewRenderer.color = deletePreviewColor;
+        }
+        else if (placedTiles.ContainsKey(gridPos))
         {
             previewRenderer.color = deletePreviewColor;
         }
@@ -250,21 +283,94 @@ public class PlacementSystem : MonoBehaviour
             return;
         }
 
-        // UI上にマウスがある場合は無視
-        if (UnityEngine.EventSystems.EventSystem.current != null &&
-            UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+        if (GridSystem.Instance == null) return;
+
+        if (!Input.touchSupported || Input.touchCount == 0)
         {
+            if (hasActiveMultiTouchGesture)
+            {
+                hasActiveMultiTouchGesture = false;
+                blockEditUntilTime = Time.unscaledTime + postPinchInputBlockSeconds;
+            }
+        }
+
+        bool hasTouchInput = Input.touchSupported && Input.touchCount > 0;
+        if (hasTouchInput)
+        {
+            // 2本指以上の操作中（ピンチ中）は編集入力を無効化
+            if (Input.touchCount >= 2)
+            {
+                hasActiveMultiTouchGesture = true;
+                blockEditUntilTime = Time.unscaledTime + postPinchInputBlockSeconds;
+                return;
+            }
+
+            if (hasActiveMultiTouchGesture)
+            {
+                return;
+            }
+
+            // ピンチ直後の誤タップ/誤配置を抑止
+            if (Time.unscaledTime < blockEditUntilTime)
+            {
+                return;
+            }
+
+            Touch touch = Input.GetTouch(0);
+
+            if (UnityEngine.EventSystems.EventSystem.current != null &&
+                UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(touch.fingerId))
+            {
+                return;
+            }
+
+            // 2本指操作に移る可能性が高い開始直後は編集しない
+            if (touch.phase == TouchPhase.Began)
+            {
+                blockEditUntilTime = Time.unscaledTime + 0.05f;
+                return;
+            }
+
+            if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
+            {
+                return;
+            }
+
+            Vector2Int touchGridPos = GridSystem.Instance.GetScreenGridPosition(touch.position);
+            if (isDeleteMode)
+            {
+                RemoveTile(touchGridPos);
+            }
+            else
+            {
+                PlaceTile(touchGridPos, currentTileType);
+            }
+
             return;
         }
 
-        if (GridSystem.Instance == null) return;
+        // UI上にマウスがある場合は無視
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+        {
+            if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            {
+                return;
+            }
+        }
 
         Vector2Int gridPos = GridSystem.Instance.GetMouseGridPosition();
 
-        // 左クリック: 配置
+        // 左クリック/タップ: 配置 or 削除モードなら削除
         if (Input.GetMouseButton(0))
         {
-            PlaceTile(gridPos, currentTileType);
+            if (isDeleteMode)
+            {
+                RemoveTile(gridPos);
+            }
+            else
+            {
+                PlaceTile(gridPos, currentTileType);
+            }
         }
 
         // 右クリック: 削除
@@ -487,7 +593,14 @@ public class PlacementSystem : MonoBehaviour
     /// </summary>
     public void SetTileType(char tileType)
     {
+        isDeleteMode = false;
         currentTileType = tileType;
+        UpdatePreviewSprite();
+    }
+
+    public void SetDeleteMode(bool enabled)
+    {
+        isDeleteMode = enabled;
         UpdatePreviewSprite();
     }
 

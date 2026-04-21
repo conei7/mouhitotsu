@@ -5,6 +5,8 @@ using UnityEngine;
 /// </summary>
 public class TitleButton : MonoBehaviour
 {
+    [SerializeField] private string editorSceneName = "EditorScene";
+
     public void OnStartClick()
     {
         if (GameManager.Instance != null)
@@ -38,5 +40,13 @@ public class TitleButton : MonoBehaviour
     public void OnStageSelectClick()
     {
         UnityEngine.SceneManagement.SceneManager.LoadScene("StageSelectScene");
+    }
+
+    /// <summary>
+    /// マップエディタへ
+    /// </summary>
+    public void OnMapEditorClick()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene(editorSceneName);
     }
 }

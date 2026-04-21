@@ -26,6 +26,7 @@ public class ObjectPalette : MonoBehaviour
     // パレットアイテム定義
     private readonly List<PaletteItem> items = new List<PaletteItem>
     {
+        new PaletteItem { symbol = '\0', name = "削除", shortcut = KeyCode.BackQuote, isDeleteMode = true },
         new PaletteItem { symbol = '#', name = "壁", shortcut = KeyCode.Alpha1 },
         new PaletteItem { symbol = 'S', name = "プレイヤー", shortcut = KeyCode.Alpha2 },
         new PaletteItem { symbol = 'G', name = "ゴール", shortcut = KeyCode.Alpha3 },
@@ -202,14 +203,26 @@ public class ObjectPalette : MonoBehaviour
         selectedIndex = index;
         PaletteItem item = items[index];
 
-        // チャンネルベースのアイテムの場合、実際のシンボルを計算
-        char symbol = item.symbol;
-        if (item.isChannelBased)
+        if (item.isDeleteMode)
         {
-            symbol = GetChannelSymbol(item.symbol, currentChannel);
+            placementSystem?.SetDeleteMode(true);
+        }
+        else
+        {
+            placementSystem?.SetDeleteMode(false);
         }
 
-        placementSystem?.SetTileType(symbol);
+        // チャンネルベースのアイテムの場合、実際のシンボルを計算
+        if (!item.isDeleteMode)
+        {
+            char symbol = item.symbol;
+            if (item.isChannelBased)
+            {
+                symbol = GetChannelSymbol(item.symbol, currentChannel);
+            }
+
+            placementSystem?.SetTileType(symbol);
+        }
 
         // ボタンの色を更新
         for (int i = 0; i < buttons.Count; i++)
@@ -290,7 +303,7 @@ public class ObjectPalette : MonoBehaviour
     private void UpdateChannelSelectorVisibility()
     {
         // チャンネルベースのアイテムが選択されている時のみ表示
-        bool showChannels = selectedIndex >= 0 && selectedIndex < items.Count && items[selectedIndex].isChannelBased;
+        bool showChannels = selectedIndex >= 0 && selectedIndex < items.Count && items[selectedIndex].isChannelBased && !items[selectedIndex].isDeleteMode;
 
         // パネル全体が設定されていればそれを制御、なければコンテナのみ制御
         if (channelControlPanel != null)
@@ -311,6 +324,10 @@ public class ObjectPalette : MonoBehaviour
         if (selectedIndex >= 0 && selectedIndex < items.Count)
         {
             PaletteItem item = items[selectedIndex];
+            if (item.isDeleteMode)
+            {
+                return "削除モード";
+            }
             if (item.isChannelBased)
             {
                 // 切替壁の場合はShift状態も表示
@@ -362,4 +379,5 @@ public class PaletteItem
     public string name;
     public KeyCode shortcut;
     public bool isChannelBased = false;
+    public bool isDeleteMode = false;
 }
