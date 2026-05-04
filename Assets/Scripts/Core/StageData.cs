@@ -17,9 +17,14 @@ public class StageData
     public string name;
 
     /// <summary>
-    /// マップテキストデータ
+    /// マップテキストデータ（テキストファイルをアサインする場合は mapTextAsset を使用）
     /// </summary>
     public string mapText;
+
+    /// <summary>
+    /// マップテキストファイル（インスペクターからアサイン可能。設定時は mapText より優先される）
+    /// </summary>
+    public TextAsset mapTextAsset;
 
     /// <summary>
     /// 組み込みステージかどうか
@@ -172,7 +177,9 @@ public class StageData
 
     public string GetResolvedMapText()
     {
-        return MapTextCodec.DecodeIfNeeded(mapText);
+        // TextAsset が直接アサインされていれば優先する
+        string source = (mapTextAsset != null) ? mapTextAsset.text : mapText;
+        return MapTextCodec.DecodeIfNeeded(source);
     }
 }
 

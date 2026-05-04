@@ -12,6 +12,9 @@ public class StageDatabase : MonoBehaviour
     private const string USER_STAGES_KEY = "UserStages";
     private const string BUILTIN_STAGES_RESOURCE = "BuiltInStages";
 
+    [Header("組み込みステージ（インスペクターから直接追加可能）")]
+    [SerializeField] private StageData[] inspectorBuiltInStages = new StageData[0];
+
     private List<StageData> builtInStages = new List<StageData>();
     private List<StageData> userStages = new List<StageData>();
 
@@ -30,10 +33,28 @@ public class StageDatabase : MonoBehaviour
     }
 
     /// <summary>
-    /// 組み込みステージをResourcesから読み込み
+    /// 組み込みステージを読み込み
+    /// インスペクターに設定がある場合はそちらを優先、なければ Resources の JSON を使用
     /// </summary>
     private void LoadBuiltInStages()
     {
+        // インスペクターに直接設定されたステージを優先する
+        if (inspectorBuiltInStages != null && inspectorBuiltInStages.Length > 0)
+        {
+            builtInStages = new List<StageData>(inspectorBuiltInStages);
+            foreach (var stage in builtInStages)
+            {
+                stage.isBuiltIn = true;
+                if (stage.stageNumber <= 0)
+                {
+                    stage.stageNumber = builtInStages.IndexOf(stage) + 1;
+                }
+            }
+            Debug.Log($"Loaded {builtInStages.Count} built-in stages from inspector");
+            return;
+        }
+
+        // インスペクターに設定がなければ Resources の JSON を読み込む
         TextAsset jsonAsset = Resources.Load<TextAsset>(BUILTIN_STAGES_RESOURCE);
         if (jsonAsset != null)
         {
@@ -47,7 +68,7 @@ public class StageDatabase : MonoBehaviour
                     {
                         stage.isBuiltIn = true;
                     }
-                    Debug.Log($"Loaded {builtInStages.Count} built-in stages");
+                    Debug.Log($"Loaded {builtInStages.Count} built-in stages from JSON");
                 }
             }
             catch (System.Exception e)

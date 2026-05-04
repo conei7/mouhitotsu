@@ -1095,7 +1095,7 @@ GameObject:
   - component: {fileID: 674194408}
   - component: {fileID: 674194407}
   m_Layer: 0
-  m_Name: ' StageDatabase'
+  m_Name: StageDatabase
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1113,6 +1113,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42f68b5cb51209c4a9c7ff8774b4aa54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  inspectorBuiltInStages:
+  - id: 
+    name: "\u30B9\u30C6\u30FC\u30B81"
+    mapText: 
+    mapTextAsset: {fileID: 4900000, guid: 6a68cb0747212b84b96538d730429f53, type: 3}
+    isBuiltIn: 0
+    stageNumber: 0
+    cameraSize: 0
+    cameraOffsetX: 0
+    cameraOffsetY: 0
+    createdAt: 0
+  - id: 
+    name: 2
+    mapText: 
+    mapTextAsset: {fileID: 4900000, guid: 381943f31f445e145b985ffcc9cbfd69, type: 3}
+    isBuiltIn: 0
+    stageNumber: 0
+    cameraSize: 0
+    cameraOffsetX: 0
+    cameraOffsetY: 0
+    createdAt: 0
+  - id: 
+    name: 2
+    mapText: 
+    mapTextAsset: {fileID: 4900000, guid: 381943f31f445e145b985ffcc9cbfd69, type: 3}
+    isBuiltIn: 0
+    stageNumber: 0
+    cameraSize: 0
+    cameraOffsetX: 0
+    cameraOffsetY: 0
+    createdAt: 0
 --- !u!4 &674194408
 Transform:
   m_ObjectHideFlags: 0
