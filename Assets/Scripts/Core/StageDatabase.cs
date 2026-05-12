@@ -42,12 +42,17 @@ public class StageDatabase : MonoBehaviour
         if (inspectorBuiltInStages != null && inspectorBuiltInStages.Length > 0)
         {
             builtInStages = new List<StageData>(inspectorBuiltInStages);
-            foreach (var stage in builtInStages)
+            for (int i = 0; i < builtInStages.Count; i++)
             {
+                var stage = builtInStages[i];
                 stage.isBuiltIn = true;
                 if (stage.stageNumber <= 0)
                 {
-                    stage.stageNumber = builtInStages.IndexOf(stage) + 1;
+                    stage.stageNumber = i + 1;
+                }
+                if (string.IsNullOrEmpty(stage.id))
+                {
+                    stage.id = $"stage_{stage.stageNumber:000}";
                 }
             }
             Debug.Log($"Loaded {builtInStages.Count} built-in stages from inspector");

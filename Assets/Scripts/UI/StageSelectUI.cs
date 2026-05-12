@@ -33,7 +33,6 @@ public class StageSelectUI : MonoBehaviour
         }
 
         var stages = StageDatabase.Instance.GetAllStages();
-        int maxCleared = StageManager.MaxClearedStage;
 
         foreach (var stage in stages)
         {
@@ -52,22 +51,7 @@ public class StageSelectUI : MonoBehaviour
             Button btn = btnObj.GetComponent<Button>();
             string stageId = stage.id; // ローカル変数にキャプチャ
 
-            // ロック処理（組み込みステージの場合、前のステージクリアが必要とか）
-            bool isLocked = false;
-            if (stage.isBuiltIn && stage.stageNumber > maxCleared + 1)
-            {
-                isLocked = true;
-            }
-
-            if (isLocked)
-            {
-                btn.interactable = false;
-                if (btnText != null) btnText.text += " (Locked)";
-            }
-            else
-            {
-                btn.onClick.AddListener(() => OnStageClicked(stageId));
-            }
+            btn.onClick.AddListener(() => OnStageClicked(stageId));
         }
     }
 

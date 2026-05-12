@@ -20,11 +20,6 @@ public class SettingsToggle : MonoBehaviour
 
     private void Update()
     {
-        // Escキーでトグル
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            ToggleSettings();
-        }
     }
 
     public void ToggleSettings()

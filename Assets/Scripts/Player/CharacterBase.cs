@@ -20,6 +20,7 @@ public class CharacterBase : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private GravityCamera gravityCamera;
+    [SerializeField] private SpriteRenderer spriteRenderer;
 
     private Rigidbody2D rb;
     private BoxCollider2D boxCollider;
@@ -49,6 +50,8 @@ public class CharacterBase : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         boxCollider = GetComponent<BoxCollider2D>();
         rb.freezeRotation = true;
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponentInChildren<SpriteRenderer>();
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         
         // 摩擦なし
@@ -104,6 +107,12 @@ public class CharacterBase : MonoBehaviour
         }
         lastHorizontalInput = horizontalInput;
 
+        // スプライト左右反転
+        if (horizontalInput != 0f && spriteRenderer != null)
+        {
+            spriteRenderer.flipX = horizontalInput < 0f;
+        }
+
         // 斜めジャンプ（Q:左斜め、E:右斜め）
         float diagonalInput = 0f;
         if (Input.GetKeyDown(KeyCode.Q)) diagonalInput = -1f;
@@ -111,6 +120,10 @@ public class CharacterBase : MonoBehaviour
 
         if (isGrounded && diagonalInput != 0f)
         {
+            // スプライト反転
+            if (spriteRenderer != null)
+                spriteRenderer.flipX = diagonalInput < 0f;
+
             Vector2 jumpVec;
             // 右方向ベクトル
             Vector2 rightDir = moveDirection;

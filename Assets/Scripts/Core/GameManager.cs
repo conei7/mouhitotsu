@@ -68,6 +68,13 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
+        // Escキーでアプリ終了（エディタテストプレイ中はスキップ）
+        if (Input.GetKeyDown(KeyCode.Escape) && !StageManager.IsEditorTestPlay)
+        {
+            Application.Quit();
+            return;
+        }
+
         if (isGameOver) return;
 
         // プレイヤーを探す（RuntimeMapLoaderが生成するまで待つ）
